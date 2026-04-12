@@ -6,41 +6,51 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.4"
+  }
   public: {
     Tables: {
       casillas: {
         Row: {
           casilla: string | null
-          casilla_id: string
-          distrito_local: number | null
-          id: number
+          casilla_id: number
+          df: number | null
+          dl: number | null
           municipio: number | null
-          rg_id: number | null
-          seccion: number | null
-          tipo_casilla: string | null
         }
         Insert: {
           casilla?: string | null
-          casilla_id: string
-          distrito_local?: number | null
-          id?: number
+          casilla_id: number
+          df?: number | null
+          dl?: number | null
           municipio?: number | null
-          rg_id?: number | null
-          seccion?: number | null
-          tipo_casilla?: string | null
         }
         Update: {
           casilla?: string | null
-          casilla_id?: string
-          distrito_local?: number | null
-          id?: number
+          casilla_id?: number
+          df?: number | null
+          dl?: number | null
           municipio?: number | null
-          rg_id?: number | null
-          seccion?: number | null
-          tipo_casilla?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "casillas_df_fkey"
+            columns: ["df"]
+            isOneToOne: false
+            referencedRelation: "df"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casillas_dl_fkey"
+            columns: ["dl"]
+            isOneToOne: false
+            referencedRelation: "dl"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "casillas_municipio_fkey"
             columns: ["municipio"]
@@ -48,55 +58,49 @@ export interface Database {
             referencedRelation: "municipios"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "casillas_rg_id_fkey"
-            columns: ["rg_id"]
-            isOneToOne: false
-            referencedRelation: "representantes_generales"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casillas_seccion_fkey"
-            columns: ["seccion"]
-            isOneToOne: false
-            referencedRelation: "secciones"
-            referencedColumns: ["id"]
-          }
         ]
       }
       df: {
         Row: {
-          cabecera: string | null
-          df: number | null
+          df: number
           id: number
+          municipio_id: number | null
         }
         Insert: {
-          cabecera?: string | null
-          df?: number | null
+          df: number
           id?: number
+          municipio_id?: number | null
         }
         Update: {
-          cabecera?: string | null
-          df?: number | null
+          df?: number
           id?: number
+          municipio_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_df_municipio"
+            columns: ["municipio_id"]
+            isOneToOne: false
+            referencedRelation: "municipios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dl: {
         Row: {
-          cabecera: string | null
-          dl: number | null
+          dl: number
           id: number
+          municipio_id: number | null
         }
         Insert: {
-          cabecera?: string | null
-          dl?: number | null
+          dl: number
           id?: number
+          municipio_id?: number | null
         }
         Update: {
-          cabecera?: string | null
-          dl?: number | null
+          dl?: number
           id?: number
+          municipio_id?: number | null
         }
         Relationships: []
       }
@@ -118,74 +122,26 @@ export interface Database {
       rc: {
         Row: {
           apellido_materno: string | null
-          apellido_paterno: string | null
-          casilla_id: string | null
-          clave_elector: string | null
-          id: number
-          nombre: string | null
-          rg_id: number | null
-        }
-        Insert: {
-          apellido_materno?: string | null
-          apellido_paterno?: string | null
-          casilla_id?: string | null
-          clave_elector?: string | null
-          id?: number
-          nombre?: string | null
-          rg_id?: number | null
-        }
-        Update: {
-          apellido_materno?: string | null
-          apellido_paterno?: string | null
-          casilla_id?: string | null
-          clave_elector?: string | null
-          id?: number
-          nombre?: string | null
-          rg_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rc_casilla_id_fkey"
-            columns: ["casilla_id"]
-            isOneToOne: false
-            referencedRelation: "casillas"
-            referencedColumns: ["casilla_id"]
-          },
-          {
-            foreignKeyName: "rc_rg_id_fkey"
-            columns: ["rg_id"]
-            isOneToOne: false
-            referencedRelation: "representantes_generales"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      representantes_casilla: {
-        Row: {
-          apellido_materno: string | null
           apellido_paterno: string
-          autoriza_propaganda: boolean | null
+          autoriza_propaganda: boolean
           calle: string | null
-          casilla_id: string | null
+          casilla_id: number | null
           cic: string | null
           clave_elector: string
           codigo_postal: string | null
           colonia: string | null
           correo_electronico: string | null
-          created_at: string
-          credencial_vigente: boolean | null
-          df_id: number | null
-          dl_id: number | null
-          es_militante: boolean | null
-          firma_capturada: boolean | null
+          credencial_vigente: boolean
+          df_id: number
+          dl_id: number
+          es_militante: boolean
+          firma_capturada: boolean
           id: number
-          municipio_id: number | null
           nombre: string
           num_ext: string | null
           num_int: string | null
-          numero_credencial: string | null
-          rg_id: number | null
-          seccion_id: number | null
+          numero_credencial: string
+          seccion_id: number
           telefono: string | null
           tipo_nombramiento: Database["public"]["Enums"]["tipo_nombramiento"]
           tipo_propaganda: Database["public"]["Enums"]["tipo_propaganda"] | null
@@ -193,278 +149,198 @@ export interface Database {
         Insert: {
           apellido_materno?: string | null
           apellido_paterno: string
-          autoriza_propaganda?: boolean | null
+          autoriza_propaganda?: boolean
           calle?: string | null
-          casilla_id?: string | null
-          cic?: string | null
-          clave_elector: string
-          codigo_postal?: string | null
-          colonia?: string | null
-          correo_electronico?: string | null
-          created_at?: string
-          credencial_vigente?: boolean | null
-          df_id?: number | null
-          dl_id?: number | null
-          es_militante?: boolean | null
-          firma_capturada?: boolean | null
-          id?: number
-          municipio_id?: number | null
-          nombre: string
-          num_ext?: string | null
-          num_int?: string | null
-          numero_credencial?: string | null
-          rg_id?: number | null
-          seccion_id?: number | null
-          telefono?: string | null
-          tipo_nombramiento?: Database["public"]["Enums"]["tipo_nombramiento"]
-          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
-        }
-        Update: {
-          apellido_materno?: string | null
-          apellido_paterno?: string
-          autoriza_propaganda?: boolean | null
-          calle?: string | null
-          casilla_id?: string | null
+          casilla_id?: number | null
           cic?: string | null
           clave_elector?: string
           codigo_postal?: string | null
           colonia?: string | null
           correo_electronico?: string | null
-          created_at?: string
-          credencial_vigente?: boolean | null
-          df_id?: number | null
-          dl_id?: number | null
-          es_militante?: boolean | null
-          firma_capturada?: boolean | null
+          credencial_vigente?: boolean
+          df_id: number
+          dl_id: number
+          es_militante?: boolean
+          firma_capturada?: boolean
           id?: number
-          municipio_id?: number | null
+          nombre: string
+          num_ext?: string | null
+          num_int?: string | null
+          numero_credencial?: string
+          seccion_id: number
+          telefono?: string | null
+          tipo_nombramiento: Database["public"]["Enums"]["tipo_nombramiento"]
+          tipo_propaganda?:
+            | Database["public"]["Enums"]["tipo_propaganda"]
+            | null
+        }
+        Update: {
+          apellido_materno?: string | null
+          apellido_paterno?: string
+          autoriza_propaganda?: boolean
+          calle?: string | null
+          casilla_id?: number | null
+          cic?: string | null
+          clave_elector?: string
+          codigo_postal?: string | null
+          colonia?: string | null
+          correo_electronico?: string | null
+          credencial_vigente?: boolean
+          df_id?: number
+          dl_id?: number
+          es_militante?: boolean
+          firma_capturada?: boolean
+          id?: number
           nombre?: string
           num_ext?: string | null
           num_int?: string | null
-          numero_credencial?: string | null
-          rg_id?: number | null
-          seccion_id?: number | null
+          numero_credencial?: string
+          seccion_id?: number
           telefono?: string | null
           tipo_nombramiento?: Database["public"]["Enums"]["tipo_nombramiento"]
-          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          tipo_propaganda?:
+            | Database["public"]["Enums"]["tipo_propaganda"]
+            | null
         }
         Relationships: [
           {
-            foreignKeyName: "representantes_casilla_casilla_id_fkey"
-            columns: ["casilla_id"]
-            isOneToOne: false
-            referencedRelation: "casillas"
-            referencedColumns: ["casilla_id"]
-          },
-          {
-            foreignKeyName: "representantes_casilla_df_id_fkey"
+            foreignKeyName: "fk_rc_fed"
             columns: ["df_id"]
             isOneToOne: false
             referencedRelation: "df"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "representantes_casilla_dl_id_fkey"
+            foreignKeyName: "fk_rc_loc"
             columns: ["dl_id"]
             isOneToOne: false
             referencedRelation: "dl"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "representantes_casilla_municipio_id_fkey"
-            columns: ["municipio_id"]
-            isOneToOne: false
-            referencedRelation: "municipios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "representantes_casilla_rg_id_fkey"
-            columns: ["rg_id"]
-            isOneToOne: false
-            referencedRelation: "representantes_generales"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "representantes_casilla_seccion_id_fkey"
-            columns: ["seccion_id"]
-            isOneToOne: false
-            referencedRelation: "secciones"
-            referencedColumns: ["id"]
-          }
         ]
       }
-      representantes_generales: {
+      rg: {
         Row: {
           apellido_materno: string | null
           apellido_paterno: string
-          autoriza_propaganda: boolean | null
+          autoriza_propaganda: boolean
           calle: string | null
           cic: string | null
           clave_elector: string
           codigo_postal: string | null
           colonia: string | null
           correo_electronico: string | null
-          created_at: string
-          credencial_vigente: boolean | null
-          df_id: number | null
-          dl_id: number | null
-          es_militante: boolean | null
-          firma_capturada: boolean | null
+          credencial_vigente: boolean
+          df_id: number
+          dl_id: number
+          es_militante: boolean
+          firma_capturada: boolean
           id: number
-          municipio_id: number | null
           nombre: string
           num_ext: string | null
           num_int: string | null
-          numero_credencial: string | null
-          seccion_id: number | null
+          numero_credencial: string
+          seccion_id: number
           telefono: string | null
           tipo_propaganda: Database["public"]["Enums"]["tipo_propaganda"] | null
         }
         Insert: {
           apellido_materno?: string | null
           apellido_paterno: string
-          autoriza_propaganda?: boolean | null
-          calle?: string | null
-          cic?: string | null
-          clave_elector: string
-          codigo_postal?: string | null
-          colonia?: string | null
-          correo_electronico?: string | null
-          created_at?: string
-          credencial_vigente?: boolean | null
-          df_id?: number | null
-          dl_id?: number | null
-          es_militante?: boolean | null
-          firma_capturada?: boolean | null
-          id?: number
-          municipio_id?: number | null
-          nombre: string
-          num_ext?: string | null
-          num_int?: string | null
-          numero_credencial?: string | null
-          seccion_id?: number | null
-          telefono?: string | null
-          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
-        }
-        Update: {
-          apellido_materno?: string | null
-          apellido_paterno?: string
-          autoriza_propaganda?: boolean | null
+          autoriza_propaganda?: boolean
           calle?: string | null
           cic?: string | null
           clave_elector?: string
           codigo_postal?: string | null
           colonia?: string | null
           correo_electronico?: string | null
-          created_at?: string
-          credencial_vigente?: boolean | null
-          df_id?: number | null
-          dl_id?: number | null
-          es_militante?: boolean | null
-          firma_capturada?: boolean | null
+          credencial_vigente?: boolean
+          df_id: number
+          dl_id: number
+          es_militante?: boolean
+          firma_capturada?: boolean
           id?: number
-          municipio_id?: number | null
+          nombre: string
+          num_ext?: string | null
+          num_int?: string | null
+          numero_credencial?: string
+          seccion_id: number
+          telefono?: string | null
+          tipo_propaganda?:
+            | Database["public"]["Enums"]["tipo_propaganda"]
+            | null
+        }
+        Update: {
+          apellido_materno?: string | null
+          apellido_paterno?: string
+          autoriza_propaganda?: boolean
+          calle?: string | null
+          cic?: string | null
+          clave_elector?: string
+          codigo_postal?: string | null
+          colonia?: string | null
+          correo_electronico?: string | null
+          credencial_vigente?: boolean
+          df_id?: number
+          dl_id?: number
+          es_militante?: boolean
+          firma_capturada?: boolean
+          id?: number
           nombre?: string
           num_ext?: string | null
           num_int?: string | null
-          numero_credencial?: string | null
-          seccion_id?: number | null
+          numero_credencial?: string
+          seccion_id?: number
           telefono?: string | null
-          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          tipo_propaganda?:
+            | Database["public"]["Enums"]["tipo_propaganda"]
+            | null
         }
         Relationships: [
           {
-            foreignKeyName: "representantes_generales_df_id_fkey"
+            foreignKeyName: "fk_rg_fed"
             columns: ["df_id"]
             isOneToOne: false
             referencedRelation: "df"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "representantes_generales_dl_id_fkey"
+            foreignKeyName: "fk_rg_loc"
             columns: ["dl_id"]
             isOneToOne: false
             referencedRelation: "dl"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "representantes_generales_municipio_id_fkey"
-            columns: ["municipio_id"]
-            isOneToOne: false
-            referencedRelation: "municipios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "representantes_generales_seccion_id_fkey"
-            columns: ["seccion_id"]
-            isOneToOne: false
-            referencedRelation: "secciones"
-            referencedColumns: ["id"]
-          }
         ]
-      }
-      rg: {
-        Row: {
-          apellido_materno: string | null
-          apellido_paterno: string | null
-          clave_elector: string | null
-          id: number
-          nombre: string | null
-        }
-        Insert: {
-          apellido_materno?: string | null
-          apellido_paterno?: string | null
-          clave_elector?: string | null
-          id?: number
-          nombre?: string | null
-        }
-        Update: {
-          apellido_materno?: string | null
-          apellido_paterno?: string | null
-          clave_elector?: string | null
-          id?: number
-          nombre?: string | null
-        }
-        Relationships: []
       }
       rutas: {
         Row: {
-          created_at: string
           df_id: number | null
-          dl_id: number | null
+          dl_id: number
           id: number
           nombre_ruta: string
           representante_general_id: number | null
-          secciones_asignadas: string[] | null
+          secciones_asignadas: Json
         }
         Insert: {
-          created_at?: string
           df_id?: number | null
-          dl_id?: number | null
+          dl_id: number
           id?: number
           nombre_ruta: string
           representante_general_id?: number | null
-          secciones_asignadas?: string[] | null
+          secciones_asignadas: Json
         }
         Update: {
-          created_at?: string
           df_id?: number | null
-          dl_id?: number | null
+          dl_id?: number
           id?: number
           nombre_ruta?: string
           representante_general_id?: number | null
-          secciones_asignadas?: string[] | null
+          secciones_asignadas?: Json
         }
         Relationships: [
           {
-            foreignKeyName: "rutas_df_id_fkey"
-            columns: ["df_id"]
-            isOneToOne: false
-            referencedRelation: "df"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rutas_dl_id_fkey"
+            foreignKeyName: "fk_distrito_local"
             columns: ["dl_id"]
             isOneToOne: false
             referencedRelation: "dl"
@@ -474,52 +350,75 @@ export interface Database {
             foreignKeyName: "rutas_representante_general_id_fkey"
             columns: ["representante_general_id"]
             isOneToOne: false
-            referencedRelation: "representantes_generales"
+            referencedRelation: "rg"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       secciones: {
         Row: {
+          df_id: number | null
+          dl_id: number | null
           id: number
           municipio_id: number | null
         }
         Insert: {
-          id?: number
+          df_id?: number | null
+          dl_id?: number | null
+          id: number
           municipio_id?: number | null
         }
         Update: {
+          df_id?: number | null
+          dl_id?: number | null
           id?: number
           municipio_id?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "secciones_municipio_id_fkey"
+            foreignKeyName: "fk_secciones_df"
+            columns: ["df_id"]
+            isOneToOne: false
+            referencedRelation: "df"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_secciones_dl"
+            columns: ["dl_id"]
+            isOneToOne: false
+            referencedRelation: "dl"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_secciones_municipio"
             columns: ["municipio_id"]
             isOneToOne: false
             referencedRelation: "municipios"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       usuarios: {
         Row: {
+          contrasena: string | null
+          correo: string | null
           id: number
-          password_hash: string
-          rol: string | null
-          usuario: string
+          municipio: number | null
+          usuario: string | null
         }
         Insert: {
+          contrasena?: string | null
+          correo?: string | null
           id?: number
-          password_hash: string
-          rol?: string | null
-          usuario: string
+          municipio?: number | null
+          usuario?: string | null
         }
         Update: {
+          contrasena?: string | null
+          correo?: string | null
           id?: number
-          password_hash?: string
-          rol?: string | null
-          usuario?: string
+          municipio?: number | null
+          usuario?: string | null
         }
         Relationships: []
       }
@@ -528,17 +427,43 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      verify_user_password: {
-        Args: {
-          p_usuario: string
-          p_password: string
-        }
-        Returns: Json
-      }
+      [_ in never]: never
     }
     Enums: {
+      tipo_casilla:
+        | "B"
+        | "C1"
+        | "C2"
+        | "C3"
+        | "C4"
+        | "C5"
+        | "C6"
+        | "C7"
+        | "C8"
+        | "C9"
+        | "C11"
+        | "C12"
+        | "C13"
+        | "C14"
+        | "C15"
+        | "E1"
+        | "E2"
+        | "E3"
+        | "E1C1"
+        | "E1C2"
+        | "E1C3"
+        | "E1C4"
+        | "E2C1"
+        | "E2C2"
+        | "E2C3"
+        | "E2C4"
+        | "E3C1"
+        | "E3C2"
+        | "S1"
+        | "S2"
+        | "S3"
       tipo_nombramiento: "Propietario" | "Suplente"
-      tipo_propaganda: "Ninguno" | "Lona" | "Pintura" | "Vinil"
+      tipo_propaganda: "Lona" | "Pinta de Barda" | "Otro" | "Ninguno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -546,12 +471,119 @@ export interface Database {
   }
 }
 
-export type Municipio = Database['public']['Tables']['municipios']['Row']
-export type Seccion = Database['public']['Tables']['secciones']['Row']
-export type DistritoFederal = Database['public']['Tables']['df']['Row']
-export type DistritoLocal = Database['public']['Tables']['dl']['Row']
-export type Casilla = Database['public']['Tables']['casillas']['Row']
-export type RepresentanteGeneral = Database['public']['Tables']['representantes_generales']['Row']
-export type RepresentanteCasilla = Database['public']['Tables']['representantes_casilla']['Row']
-export type Ruta = Database['public']['Tables']['rutas']['Row']
-export type UsuarioManual = Database['public']['Tables']['usuarios']['Row']
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never

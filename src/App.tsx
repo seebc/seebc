@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Users, 
-  MapPin, 
-  Plus, 
   Search, 
   LayoutDashboard, 
   ClipboardList, 
@@ -16,8 +14,6 @@ import {
   LogOut,
   Trash2,
   Edit2,
-  Save,
-  X,
   FileText,
   BarChart2,
   Globe,
@@ -31,21 +27,18 @@ import {
   FileCheck
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
-import { cn } from './utils/cn';
+import { Tables } from './database.types';
+
+type Casilla = Tables<'casillas'>;
+type DistritoFederal = Tables<'df'>;
+type DistritoLocal = Tables<'dl'>;
+type Municipio = Tables<'municipios'>;
+type RepresentanteCasilla = Tables<'rc'>;
+type RepresentanteGeneral = Tables<'rg'>;
+type Seccion = Tables<'secciones'>;
+type Ruta = Tables<'rutas'>;
+type UsuarioManual = Tables<'usuarios'>;
 import { 
-  Casilla, 
-  DistritoFederal, 
-  DistritoLocal, 
-  Municipio, 
-  RepresentanteCasilla, 
-  RepresentanteGeneral, 
-  Seccion,
-  UsuarioManual,
-  Ruta
-} from './database.types';
-import { 
-  EmptyState, 
-  StatCard, 
   SkeletonTable,
   SkeletonDashboard
 } from './components/UI';
@@ -53,6 +46,38 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 // --- Constantes y Validaciones ---
 const CLAVE_ELECTOR_REGEX = /^[A-Z]{6}\d{8}[HM]\d{3}$/;
+
+// --- Interfaces de Formulario ---
+interface RGFormData {
+  nombre: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  clave_elector: string;
+  numero_credencial: string;
+  cic: string;
+  municipio_id: string; // UI Only
+  df_id: string;
+  dl_id: string;
+  seccion_id: string;
+  credencial_vigente: boolean;
+  es_militante: boolean;
+  calle: string;
+  num_ext: string;
+  num_int: string;
+  colonia: string;
+  codigo_postal: string;
+  telefono: string;
+  correo_electronico: string;
+  autoriza_propaganda: boolean;
+  tipo_propaganda: 'Ninguno' | 'Lona' | 'Pinta de Barda' | 'Otro';
+  firma_capturada: boolean;
+}
+
+interface RCFormData extends RGFormData {
+  casilla_id: string;
+  rg_id: string; // UI Only
+  tipo_nombramiento: 'Propietario' | 'Suplente';
+}
 
 // --- Componente de Error para el Dashboard ---
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
@@ -101,7 +126,6 @@ export default function App() {
   // --- UI y Navegación ---
   const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas' | 'padron' | 'rutas_form' | 'rutas_list' | 'reporte_cobertura' | 'reporte_rutas'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
-  const [casillaSearch, setCasillaSearch] = useState('');
 
   // --- Estados de Validación ---
   const [credencialValidacion, setCredencialValidacion] = useState('');
@@ -113,19 +137,19 @@ export default function App() {
   const [reporteOpValor, setReporteOpValor] = useState<string>('');
 
   // --- Formularios ---
-  const [rgForm, setRgForm] = useState({
+  const [rgForm, setRgForm] = useState<RGFormData>({
     nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
     municipio_id: '', df_id: '', dl_id: '', seccion_id: '', credencial_vigente: true, es_militante: false,
     calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
-    autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as 'Ninguno' | 'Lona' | 'Pintura' | 'Vinil', firma_capturada: false
+    autoriza_propaganda: false, tipo_propaganda: 'Ninguno', firma_capturada: false
   });
-  
-  const [rcForm, setRcForm] = useState({
+
+  const [rcForm, setRcForm] = useState<RCFormData>({
     nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
     municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '', rg_id: '',
-    tipo_nombramiento: 'Propietario' as 'Propietario' | 'Suplente', credencial_vigente: true, es_militante: false,
+    tipo_nombramiento: 'Propietario', credencial_vigente: true, es_militante: false,
     calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
-    autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as 'Ninguno' | 'Lona' | 'Pintura' | 'Vinil', firma_capturada: false
+    autoriza_propaganda: false, tipo_propaganda: 'Ninguno', firma_capturada: false
   });
 
   const [rutaForm, setRutaForm] = useState({
@@ -157,7 +181,7 @@ export default function App() {
     toast.success('Sesión cerrada');
   };
 
-  useSessionTimeout(!!currentUser, handleLogout);
+  useSessionTimeout(handleLogout, !!currentUser);
 
   // --- Carga de Datos ---
   const fetchData = useCallback(async () => {
@@ -174,8 +198,8 @@ export default function App() {
         supabase.from('df').select('*'),
         supabase.from('dl').select('*'),
         supabase.from('casillas').select('*'),
-        supabase.from('representantes_generales').select('*'),
-        supabase.from('representantes_casilla').select('*'),
+        supabase.from('rg').select('*'),
+        supabase.from('rc').select('*'),
         supabase.from('rutas').select('*')
       ]);
 
@@ -195,7 +219,38 @@ export default function App() {
     }
   }, [currentUser]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const handleTabClick = useCallback((itemId: string) => {
+    setActiveTab(itemId as any);
+    setEditingRgId(null);
+    setEditingRcId(null);
+    setCredencialValidacion('');
+    setMensajeValidacion(null);
+    setCredencialEncontrada(null);
+    if (itemId === 'generales') {
+      setRgForm({
+        nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
+        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', credencial_vigente: true, es_militante: false,
+        calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
+        autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
+      });
+    } else if (itemId === 'casilla') {
+      setRcForm({
+        nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
+        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '', rg_id: '',
+        tipo_nombramiento: 'Propietario' as any, credencial_vigente: true, es_militante: false,
+        calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
+        autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
+      });
+    } else if (itemId === 'rutas_form') {
+      if (!editingRutaId) {
+        setRutaForm({ nombre_ruta: '', representante_general_id: '', df_id: '', dl_id: '', secciones_asignadas: [] });
+      }
+    }
+  }, [editingRutaId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // --- Handlers: Representantes Generales ---
   const handleSaveRg = async (e: React.FormEvent) => {
@@ -206,12 +261,20 @@ export default function App() {
     }
 
     try {
+      const { municipio_id, ...payload } = rgForm;
+      const dataToSave = {
+        ...payload,
+        df_id: parseInt(payload.df_id),
+        dl_id: parseInt(payload.dl_id),
+        seccion_id: parseInt(payload.seccion_id)
+      };
+
       if (editingRgId) {
-        const { error } = await supabase.from('representantes_generales').update(rgForm).eq('id', editingRgId);
+        const { error } = await supabase.from('rg').update(dataToSave).eq('id', editingRgId);
         if (error) throw error;
         toast.success('Representante General actualizado');
       } else {
-        const { error } = await supabase.from('representantes_generales').insert([rgForm]);
+        const { error } = await supabase.from('rg').insert([dataToSave]);
         if (error) throw error;
         toast.success('Representante General registrado');
       }
@@ -225,7 +288,7 @@ export default function App() {
     }
   };
 
-  const handleEditRg = (rg: RepresentanteGeneral) => {
+  const handleEditRg = (rg: any) => {
     setEditingRgId(rg.id);
     setRgForm({
       nombre: rg.nombre, apellido_paterno: rg.apellido_paterno, apellido_materno: rg.apellido_materno || '',
@@ -237,7 +300,7 @@ export default function App() {
       credencial_vigente: rg.credencial_vigente, es_militante: rg.es_militante,
       calle: rg.calle || '', num_ext: rg.num_ext || '', num_int: rg.num_int || '', colonia: rg.colonia || '', 
       codigo_postal: rg.codigo_postal || '', telefono: rg.telefono || '', correo_electronico: rg.correo_electronico || '',
-      autoriza_propaganda: rg.autoriza_propaganda, tipo_propaganda: rg.tipo_propaganda, firma_capturada: rg.firma_capturada || false
+      autoriza_propaganda: rg.autoriza_propaganda, tipo_propaganda: rg.tipo_propaganda || 'Ninguno', firma_capturada: rg.firma_capturada || false
     });
     setCredencialValidacion(rg.clave_elector);
     setMensajeValidacion('exito');
@@ -246,7 +309,7 @@ export default function App() {
 
   const handleDeleteRg = async (id: number) => {
     if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-    const { error } = await supabase.from('representantes_generales').delete().eq('id', id);
+    const { error } = await supabase.from('rg').delete().eq('id', id);
     if (error) toast.error('Error al eliminar');
     else { toast.success('Registro eliminado'); fetchData(); }
   };
@@ -260,12 +323,21 @@ export default function App() {
     }
 
     try {
+      const { municipio_id, rg_id, ...payload } = rcForm;
+      const dataToSave = {
+        ...payload,
+        casilla_id: payload.casilla_id ? parseInt(payload.casilla_id) : null,
+        df_id: parseInt(payload.df_id),
+        dl_id: parseInt(payload.dl_id),
+        seccion_id: parseInt(payload.seccion_id)
+      };
+
       if (editingRcId) {
-        const { error } = await supabase.from('representantes_casilla').update(rcForm).eq('id', editingRcId);
+        const { error } = await supabase.from('rc').update(dataToSave).eq('id', editingRcId);
         if (error) throw error;
         toast.success('Representante de Casilla actualizado');
       } else {
-        const { error } = await supabase.from('representantes_casilla').insert([rcForm]);
+        const { error } = await supabase.from('rc').insert([dataToSave]);
         if (error) throw error;
         toast.success('Representante de Casilla registrado');
       }
@@ -279,7 +351,7 @@ export default function App() {
     }
   };
 
-  const handleEditRc = (rc: RepresentanteCasilla) => {
+  const handleEditRc = (rc: any) => {
     setEditingRcId(rc.id);
     setRcForm({
       nombre: rc.nombre, apellido_paterno: rc.apellido_paterno, apellido_materno: rc.apellido_materno || '',
@@ -288,13 +360,13 @@ export default function App() {
       df_id: rc.df_id ? String(rc.df_id) : '', 
       dl_id: rc.dl_id ? String(rc.dl_id) : '', 
       seccion_id: rc.seccion_id ? String(rc.seccion_id) : '',
-      casilla_id: rc.casilla_id ? String(rc.casilla_id) : '',
+      casilla_id: rc.casilla_id ? String(rc.casilla_id) : '', 
       rg_id: rc.rg_id ? String(rc.rg_id) : '',
-      tipo_nombramiento: rc.tipo_nombramiento, 
+      tipo_nombramiento: rc.tipo_nombramiento || 'Propietario',
       credencial_vigente: rc.credencial_vigente, es_militante: rc.es_militante,
       calle: rc.calle || '', num_ext: rc.num_ext || '', num_int: rc.num_int || '', colonia: rc.colonia || '', 
       codigo_postal: rc.codigo_postal || '', telefono: rc.telefono || '', correo_electronico: rc.correo_electronico || '',
-      autoriza_propaganda: rc.autoriza_propaganda, tipo_propaganda: rc.tipo_propaganda, firma_capturada: rc.firma_capturada || false
+      autoriza_propaganda: rc.autoriza_propaganda, tipo_propaganda: rc.tipo_propaganda || 'Ninguno', firma_capturada: rc.firma_capturada || false
     });
     setCredencialValidacion(rc.clave_elector);
     setMensajeValidacion('exito');
@@ -303,7 +375,7 @@ export default function App() {
 
   const handleDeleteRc = async (id: number) => {
     if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-    const { error } = await supabase.from('representantes_casilla').delete().eq('id', id);
+    const { error } = await supabase.from('rc').delete().eq('id', id);
     if (error) toast.error('Error al eliminar');
     else { toast.success('Registro eliminado'); fetchData(); }
   };
@@ -311,18 +383,21 @@ export default function App() {
   // --- Handlers: Rutas ---
   const handleSaveRuta = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rutaForm.nombre_ruta || !rutaForm.representante_general_id) {
-      toast.error('Nombre de ruta y RG son obligatorios');
-      return;
-    }
-
     try {
+      const dataToSave = {
+        ...rutaForm,
+        df_id: parseInt(rutaForm.df_id),
+        dl_id: parseInt(rutaForm.dl_id),
+        representante_general_id: rutaForm.representante_general_id ? parseInt(rutaForm.representante_general_id) : null,
+        secciones_asignadas: rutaForm.secciones_asignadas as any
+      };
+
       if (editingRutaId) {
-        const { error } = await supabase.from('rutas').update(rutaForm).eq('id', editingRutaId);
+        const { error } = await supabase.from('rutas').update(dataToSave).eq('id', editingRutaId);
         if (error) throw error;
         toast.success('Ruta actualizada');
       } else {
-        const { error } = await supabase.from('rutas').insert([rutaForm]);
+        const { error } = await supabase.from('rutas').insert([dataToSave]);
         if (error) throw error;
         toast.success('Ruta registrada');
       }
@@ -342,7 +417,7 @@ export default function App() {
       representante_general_id: String(ruta.representante_general_id),
       df_id: ruta.df_id ? String(ruta.df_id) : '',
       dl_id: ruta.dl_id ? String(ruta.dl_id) : '',
-      secciones_asignadas: ruta.secciones_asignadas || []
+      secciones_asignadas: (ruta.secciones_asignadas as string[]) || []
     });
     setActiveTab('rutas_form');
   };
@@ -370,17 +445,7 @@ export default function App() {
       {/* Sidebar Fija (Design System: Bento Sidebar) */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        setEditingRgId={setEditingRgId}
-        setEditingRcId={setEditingRcId}
-        setCredencialValidacion={setCredencialValidacion}
-        setMensajeValidacion={setMensajeValidacion}
-        setCredencialEncontrada={setCredencialEncontrada}
-        setRgForm={setRgForm}
-        setRcForm={setRcForm}
-        setRutaForm={setRutaForm}
-        setCasillaSearch={setCasillaSearch}
-        editingRutaId={editingRutaId}
+        handleTabClick={handleTabClick}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -646,7 +711,7 @@ export default function App() {
                           <tbody className="divide-y divide-slate-100">
                              {representantesCasilla
                                .filter(rc => {
-                                 if (reporteOpTipo === 'rg') return String(rc.rg_id) === reporteOpValor;
+                                 if (reporteOpTipo === 'rg') return String((rc as any).rg_id) === reporteOpValor;
                                  if (reporteOpTipo === 'df') return String(rc.df_id) === reporteOpValor;
                                  if (reporteOpTipo === 'dl') return String(rc.dl_id) === reporteOpValor;
                                  return false;
@@ -682,7 +747,7 @@ export default function App() {
                                   );
                                })}
                              {representantesCasilla.filter(rc => {
-                                 if (reporteOpTipo === 'rg') return String(rc.rg_id) === reporteOpValor;
+                                 if (reporteOpTipo === 'rg') return String((rc as any).rg_id) === reporteOpValor;
                                  if (reporteOpTipo === 'df') return String(rc.df_id) === reporteOpValor;
                                  if (reporteOpTipo === 'dl') return String(rc.dl_id) === reporteOpValor;
                                  return false;
@@ -795,6 +860,310 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'generales' && (
+              <div className="space-y-12 animate-in fade-in slide-in-from-right-2 duration-500">
+                <header>
+                  <p className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] mb-3">Estructura Electoral</p>
+                  <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{editingRgId ? 'Editar' : 'Registro de'} <span className="text-slate-400">Representante General</span></h2>
+                </header>
+
+                <ValidadorCredencial 
+                  credencialValidacion={credencialValidacion}
+                  setCredencialValidacion={setCredencialValidacion}
+                  mensajeValidacion={mensajeValidacion}
+                  setMensajeValidacion={setMensajeValidacion}
+                  credencialEncontrada={credencialEncontrada}
+                  setCredencialEncontrada={setCredencialEncontrada}
+                  activeTab={activeTab}
+                  representantesGenerales={representantesGenerales}
+                  representantesCasilla={representantesCasilla}
+                  editingRgId={editingRgId}
+                  setRgForm={setRgForm}
+                />
+
+                {rgForm.clave_elector && (
+                  <form onSubmit={handleSaveRg} className="space-y-10 bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-blue-600" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre(s)</label>
+                        <input type="text" required className="premium-input uppercase" value={rgForm.nombre} onChange={e => setRgForm({...rgForm, nombre: e.target.value.toUpperCase()})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellido Paterno</label>
+                        <input type="text" required className="premium-input uppercase" value={rgForm.apellido_paterno} onChange={e => setRgForm({...rgForm, apellido_paterno: e.target.value.toUpperCase()})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellido Materno</label>
+                        <input type="text" className="premium-input uppercase" value={rgForm.apellido_materno} onChange={e => setRgForm({...rgForm, apellido_materno: e.target.value.toUpperCase()})} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave de Elector</label>
+                        <input type="text" readOnly className="premium-input bg-slate-50 text-slate-400 cursor-not-allowed font-mono" value={rgForm.clave_elector} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">No. Credencial</label>
+                        <input type="text" className="premium-input" value={rgForm.numero_credencial} onChange={e => setRgForm({...rgForm, numero_credencial: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CIC</label>
+                        <input type="text" className="premium-input" value={rgForm.cic} onChange={e => setRgForm({...rgForm, cic: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
+                        <input type="tel" className="premium-input" value={rgForm.telefono} onChange={e => setRgForm({...rgForm, telefono: e.target.value})} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Municipio</label>
+                        <select required className="premium-input" value={rgForm.municipio_id} onChange={e => setRgForm({...rgForm, municipio_id: e.target.value, seccion_id: ''})}>
+                          <option value="">Seleccionar...</option>
+                          {municipios.map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sección</label>
+                        <select required className="premium-input" value={rgForm.seccion_id} onChange={e => setRgForm({...rgForm, seccion_id: e.target.value})}>
+                          <option value="">Seleccionar...</option>
+                          {secciones.filter(s => String(s.municipio_id) === rgForm.municipio_id).map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Distrito Federal</label>
+                        <select required className="premium-input" value={rgForm.df_id} onChange={e => setRgForm({...rgForm, df_id: e.target.value})}>
+                          <option value="">Seleccionar...</option>
+                          {distritosFederales.map(d => <option key={d.id} value={d.id}>DF {d.df}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Distrito Local</label>
+                        <select required className="premium-input" value={rgForm.dl_id} onChange={e => setRgForm({...rgForm, dl_id: e.target.value})}>
+                          <option value="">Seleccionar...</option>
+                          {distritosLocales.map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-6 pt-10 border-t border-slate-50">
+                      <button type="button" onClick={() => handleTabClick('listado_rg')} className="px-10 py-5 text-slate-400 text-xs font-black uppercase tracking-widest hover:text-slate-900 transition-colors">Cancelar</button>
+                      <button type="submit" className="px-14 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-2xl shadow-slate-900/20 active:scale-95 transition-all outline-none">
+                        {editingRgId ? 'Actualizar Registro' : 'Completar Registro'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'casilla' && (
+              <div className="space-y-12 animate-in fade-in slide-in-from-right-2 duration-500">
+                <header>
+                  <p className="text-amber-600 text-[10px] font-black uppercase tracking-[0.3em] mb-3">Estructura Electoral</p>
+                  <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{editingRcId ? 'Editar' : 'Registro de'} <span className="text-slate-400">Representante de Casilla</span></h2>
+                </header>
+
+                <ValidadorCredencial 
+                  credencialValidacion={credencialValidacion}
+                  setCredencialValidacion={setCredencialValidacion}
+                  mensajeValidacion={mensajeValidacion}
+                  setMensajeValidacion={setMensajeValidacion}
+                  credencialEncontrada={credencialEncontrada}
+                  setCredencialEncontrada={setCredencialEncontrada}
+                  activeTab={activeTab}
+                  representantesGenerales={representantesGenerales}
+                  representantesCasilla={representantesCasilla}
+                  editingRcId={editingRcId}
+                  setRcForm={setRcForm}
+                />
+
+                {rcForm.clave_elector && (
+                  <form onSubmit={handleSaveRc} className="space-y-10 bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-500" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre(s)</label>
+                        <input type="text" required className="premium-input uppercase" value={rcForm.nombre} onChange={e => setRcForm({...rcForm, nombre: e.target.value.toUpperCase()})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellido Paterno</label>
+                        <input type="text" required className="premium-input uppercase" value={rcForm.apellido_paterno} onChange={e => setRcForm({...rcForm, apellido_paterno: e.target.value.toUpperCase()})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Apellido Materno</label>
+                        <input type="text" className="premium-input uppercase" value={rcForm.apellido_materno} onChange={e => setRcForm({...rcForm, apellido_materno: e.target.value.toUpperCase()})} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave de Elector</label>
+                        <input type="text" readOnly className="premium-input bg-slate-50 text-slate-400 cursor-not-allowed font-mono" value={rcForm.clave_elector} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
+                        <input type="tel" className="premium-input" value={rcForm.telefono} onChange={e => setRcForm({...rcForm, telefono: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo Registro</label>
+                        <select className="premium-input" value={rcForm.tipo_nombramiento} onChange={e => setRcForm({...rcForm, tipo_nombramiento: e.target.value as any})}>
+                          <option value="Propietario">Propietario</option>
+                          <option value="Suplente">Suplente</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RG Responsable</label>
+                        <select required className="premium-input" value={rcForm.rg_id} onChange={e => setRcForm({...rcForm, rg_id: e.target.value})}>
+                          <option value="">Seleccionar...</option>
+                          {representantesGenerales.map(rg => <option key={rg.id} value={rg.id}>{rg.nombre} {rg.apellido_paterno}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Casilla Asignada</label>
+                         <select required className="premium-input" value={rcForm.casilla_id} onChange={e => {
+                           const cas = casillas.find(c => String(c.casilla_id) === e.target.value);
+                           setRcForm({
+                             ...rcForm, 
+                             casilla_id: e.target.value,
+                             municipio_id: cas ? String(cas.municipio) : '',
+                             df_id: cas ? String(cas.df) : '',
+                             dl_id: cas ? String(cas.dl) : ''
+                           });
+                         }}>
+                           <option value="">Seleccionar...</option>
+                           {casillas.sort((a,b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, {numeric: true})).map(c => <option key={c.casilla_id} value={c.casilla_id}>{c.casilla}</option>)}
+                         </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-6 pt-10 border-t border-slate-50">
+                      <button type="button" onClick={() => handleTabClick('listado_rc')} className="px-10 py-5 text-slate-400 text-xs font-black uppercase tracking-widest hover:text-slate-900 transition-colors">Cancelar</button>
+                      <button type="submit" className="px-14 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-2xl shadow-slate-900/20 active:scale-95 transition-all outline-none">
+                        {editingRcId ? 'Actualizar Registro' : 'Completar Registro'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'listado_rc' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-right-2 duration-500">
+                <header>
+                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Listado de Representantes de Casilla</h2>
+                  <p className="text-slate-400 mt-1 text-base">Seguimiento de la estructura en niveles de casilla.</p>
+                </header>
+
+                <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-900 text-white">
+                          <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest">Nombre Completo</th>
+                          <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest">Casilla</th>
+                          <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest">Tipo</th>
+                          <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest">RG Responsable</th>
+                          <th className="px-8 py-6 text-center text-[10px] font-black uppercase tracking-widest">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {representantesCasilla
+                          .filter(rc => 
+                            rc.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            (rc.telefono && rc.telefono.includes(searchTerm))
+                          )
+                          .map((rc) => {
+                            const cas = casillas.find(c => String(c.casilla_id) === String(rc.casilla_id));
+                            const rg = representantesGenerales.find(r => String(r.id) === String((rc as any).rg_id));
+                            return (
+                              <tr key={rc.id} className="hover:bg-slate-50">
+                                <td className="px-8 py-5 font-bold text-slate-700 uppercase">{rc.nombre} {rc.apellido_paterno}</td>
+                                <td className="px-8 py-5 font-black text-blue-600 text-xs">{cas?.casilla || 'N/A'}</td>
+                                <td className="px-8 py-5 text-xs text-slate-400 font-bold uppercase">{rc.tipo_nombramiento}</td>
+                                <td className="px-8 py-5 text-xs text-slate-500 font-medium">{rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</td>
+                                <td className="px-8 py-5 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button onClick={() => handleEditRc(rc)} className="p-2 hover:bg-blue-100 text-blue-600 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteRc(rc.id)} className="p-2 hover:bg-rose-100 text-rose-600 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'rutas_form' && (
+              <div className="space-y-12 animate-in fade-in slide-in-from-right-2 duration-500">
+                <header>
+                  <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{editingRutaId ? 'Editar' : 'Registro de'} <span className="text-slate-400">Ruta</span></h2>
+                </header>
+
+                <form onSubmit={handleSaveRuta} className="space-y-10 bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre de la Ruta</label>
+                      <input type="text" required className="premium-input uppercase" value={rutaForm.nombre_ruta} onChange={e => setRutaForm({...rutaForm, nombre_ruta: e.target.value.toUpperCase()})} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RG Responsable</label>
+                      <select required className="premium-input" value={rutaForm.representante_general_id} onChange={e => setRutaForm({...rutaForm, representante_general_id: e.target.value})}>
+                        <option value="">Seleccionar...</option>
+                        {representantesGenerales.map(rg => <option key={rg.id} value={rg.id}>{rg.nombre} {rg.apellido_paterno}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-6 pt-10 border-t border-slate-50">
+                    <button type="submit" className="px-14 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
+                      {editingRutaId ? 'Actualizar Ruta' : 'Crear Ruta'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeTab === 'rutas_list' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-right-2 duration-500">
+                <header>
+                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Listado de Rutas</h2>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {rutas.map(ruta => {
+                    const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                    return (
+                      <div key={ruta.id} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="bg-indigo-50 p-4 rounded-2xl"><Route className="w-6 h-6 text-indigo-600" /></div>
+                            <div className="flex gap-2">
+                              <button onClick={() => handleEditRuta(ruta)} className="p-2 hover:bg-slate-50 text-slate-400 hover:text-blue-600 transition-all"><Edit2 className="w-4 h-4" /></button>
+                              <button onClick={() => handleDeleteRuta(ruta.id)} className="p-2 hover:bg-slate-50 text-slate-400 hover:text-rose-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                          </div>
+                          <h4 className="text-xl font-black text-slate-900 uppercase mb-2">{ruta.nombre_ruta}</h4>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RG: {rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -919,20 +1288,15 @@ function ValidadorCredencial({
 // --- Renderizado de Sidebar (Bento Theme) ---
 function Sidebar({ 
   activeTab, 
-  setActiveTab, 
-  setEditingRgId, 
-  setEditingRcId, 
-  setCredencialValidacion, 
-  setMensajeValidacion, 
-  setCredencialEncontrada, 
-  setRgForm, 
-  setRcForm,
-  setRutaForm,
-  setCasillaSearch,
-  editingRutaId,
+  handleTabClick,
   currentUser,
-  onLogout
-}: any) {
+  onLogout 
+}: { 
+  activeTab: string; 
+  handleTabClick: (id: string) => void;
+  currentUser: any;
+  onLogout: () => void;
+}) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const toggleGroup = (groupId: string) => {
@@ -984,36 +1348,6 @@ function Sidebar({
       ]
     },
   ];
-
-  const handleTabClick = (itemId: string) => {
-    setActiveTab(itemId as any);
-    setEditingRgId(null);
-    setEditingRcId(null);
-    setCredencialValidacion('');
-    setMensajeValidacion(null);
-    setCredencialEncontrada(null);
-    setCasillaSearch('');
-    if (itemId === 'generales') {
-      setRgForm({
-        nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
-        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', credencial_vigente: true, es_militante: false,
-        calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
-        autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
-      });
-    } else if (itemId === 'casilla') {
-      setRcForm({
-        nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
-        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '', rg_id: '',
-        tipo_nombramiento: 'Propietario' as any, credencial_vigente: true, es_militante: false,
-        calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
-        autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
-      });
-    } else if (itemId === 'rutas_form') {
-      if (!editingRutaId) {
-        setRutaForm({ nombre_ruta: '', representante_general_id: '', df_id: '', dl_id: '', secciones_asignadas: [] });
-      }
-    }
-  };
 
   return (
     <div className="w-72 bg-white min-h-screen border-r border-slate-200 flex flex-col">
@@ -1114,10 +1448,10 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: UsuarioManual) => vo
     setErrorMsg(null);
     
     try {
-      const { data, error } = await supabase.rpc('verify_user_password', { 
+      const { data, error } = await (supabase as any).rpc('verify_user_password', { 
         p_usuario: usuario, 
         p_password: password 
-      } as any);
+      });
 
       if (error) throw error;
       

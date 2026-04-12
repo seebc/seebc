@@ -1,47 +1,42 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
-const TIMEOUT_DURATION = 15 * 60 * 1000; // 15 minutos en milisegundos
+const SESSION_TIMEOUT = 30 * 60 * 1000;
 
-export function useSessionTimeout(isActive: boolean, onLogout: () => void) {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+export function useSessionTimeout(onTimeout: () => void, isActive: boolean) {
+  const timeoutRef = useRef<number | null>(null);
+  const eventsRef = useRef<string[]>(['mousedown', 'keydown', 'touchstart', 'scroll']);
 
-  const resetTimeout = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (isActive) {
-      timeoutRef.current = setTimeout(() => {
-        onLogout();
-      }, TIMEOUT_DURATION);
+  const resetTimer = useCallback(() => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
     }
-  };
+    if (isActive) {
+      timeoutRef.current = window.setTimeout(() => {
+        onTimeout();
+      }, SESSION_TIMEOUT);
+    }
+  }, [onTimeout, isActive]);
 
   useEffect(() => {
-    if (isActive) {
-      const events = [
-        'mousedown',
-        'mousemove',
-        'keypress',
-        'scroll',
-        'touchstart',
-        'click',
-        'keydown'
-      ];
+    if (!isActive) return;
 
-      const handleUserActivity = () => {
-        resetTimeout();
-      };
+    const handleActivity = () => resetTimer();
 
-      events.forEach(event => {
-        window.addEventListener(event, handleUserActivity);
+    eventsRef.current.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    resetTimer();
+
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+      eventsRef.current.forEach(event => {
+        window.removeEventListener(event, handleActivity);
       });
+    };
+  }, [isActive, resetTimer]);
 
-      resetTimeout();
-
-      return () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        events.forEach(event => {
-          window.removeEventListener(event, handleUserActivity);
-        });
-      };
-    }
-  }, [isActive, onLogout]);
+  return { resetTimer };
 }
