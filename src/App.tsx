@@ -1043,16 +1043,87 @@ export default function App() {
                         <label className="input-label">Distrito Federal</label>
                         <select required className="select-field" value={rgForm.df_id} onChange={e => setRgForm({...rgForm, df_id: e.target.value})}>
                           <option value="">Seleccionar...</option>
-                          {distritosFederales.map(d => <option key={d.id} value={d.id}>DF {d.df}</option>)}
+                          {[...distritosFederales].sort((a, b) => (a.df || 0) - (b.df || 0)).map(d => <option key={d.id} value={d.id}>DF {d.df}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="input-label">Distrito Local</label>
                         <select required className="select-field" value={rgForm.dl_id} onChange={e => setRgForm({...rgForm, dl_id: e.target.value})}>
                           <option value="">Seleccionar...</option>
-                          {distritosLocales.map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                          {[...distritosLocales].sort((a, b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
                         </select>
                       </div>
+                    </div>
+
+                    {/* Correo electrónico */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="input-label">Correo Electrónico</label>
+                        <input type="email" className="input-field" value={rgForm.correo_electronico} onChange={e => setRgForm({...rgForm, correo_electronico: e.target.value})} placeholder="correo@ejemplo.com" />
+                      </div>
+                    </div>
+
+                    {/* Dirección */}
+                    <div>
+                      <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Domicilio</p>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="input-label">Calle</label>
+                          <input type="text" className="input-field uppercase" value={rgForm.calle} onChange={e => setRgForm({...rgForm, calle: e.target.value.toUpperCase()})} />
+                        </div>
+                        <div>
+                          <label className="input-label">Núm. Exterior</label>
+                          <input type="text" className="input-field" value={rgForm.num_ext} onChange={e => setRgForm({...rgForm, num_ext: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="input-label">Núm. Interior</label>
+                          <input type="text" className="input-field" value={rgForm.num_int} onChange={e => setRgForm({...rgForm, num_int: e.target.value})} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div className="md:col-span-2">
+                          <label className="input-label">Colonia</label>
+                          <input type="text" className="input-field uppercase" value={rgForm.colonia} onChange={e => setRgForm({...rgForm, colonia: e.target.value.toUpperCase()})} />
+                        </div>
+                        <div>
+                          <label className="input-label">Código Postal</label>
+                          <input type="text" className="input-field" maxLength={5} value={rgForm.codigo_postal} onChange={e => setRgForm({...rgForm, codigo_postal: e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Información adicional */}
+                    <div>
+                      <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Información Adicional</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <label className="flex items-center gap-3 p-3 rounded-lg border border-surface-200 cursor-pointer hover:bg-surface-50 transition-colors">
+                          <input type="checkbox" className="w-4 h-4 accent-inst-600" checked={rgForm.credencial_vigente} onChange={e => setRgForm({...rgForm, credencial_vigente: e.target.checked})} />
+                          <span className="text-sm font-medium text-surface-700">Credencial Vigente</span>
+                        </label>
+                        <label className="flex items-center gap-3 p-3 rounded-lg border border-surface-200 cursor-pointer hover:bg-surface-50 transition-colors">
+                          <input type="checkbox" className="w-4 h-4 accent-inst-600" checked={rgForm.es_militante} onChange={e => setRgForm({...rgForm, es_militante: e.target.checked})} />
+                          <span className="text-sm font-medium text-surface-700">Es Militante</span>
+                        </label>
+                        <label className="flex items-center gap-3 p-3 rounded-lg border border-surface-200 cursor-pointer hover:bg-surface-50 transition-colors">
+                          <input type="checkbox" className="w-4 h-4 accent-inst-600" checked={rgForm.autoriza_propaganda} onChange={e => setRgForm({...rgForm, autoriza_propaganda: e.target.checked})} />
+                          <span className="text-sm font-medium text-surface-700">Autoriza Propaganda</span>
+                        </label>
+                        <label className="flex items-center gap-3 p-3 rounded-lg border border-surface-200 cursor-pointer hover:bg-surface-50 transition-colors">
+                          <input type="checkbox" className="w-4 h-4 accent-inst-600" checked={rgForm.firma_capturada} onChange={e => setRgForm({...rgForm, firma_capturada: e.target.checked})} />
+                          <span className="text-sm font-medium text-surface-700">Firma Capturada</span>
+                        </label>
+                      </div>
+                      {rgForm.autoriza_propaganda && (
+                        <div className="mt-4 max-w-xs">
+                          <label className="input-label">Tipo de Propaganda</label>
+                          <select className="select-field" value={rgForm.tipo_propaganda} onChange={e => setRgForm({...rgForm, tipo_propaganda: e.target.value as any})}>
+                            <option value="Ninguno">Ninguno</option>
+                            <option value="Lona">Lona</option>
+                            <option value="Pinta de Barda">Pinta de Barda</option>
+                            <option value="Otro">Otro</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-surface-100">
@@ -1341,7 +1412,6 @@ function ValidadorCredencial({
             setCredencialValidacion(val);
             setMensajeValidacion(null);
             setCredencialEncontrada(null);
-            // Mantenemos la clave en el form para que no se oculte si el usuario está corrigiendo
             if (activeTab === 'generales') setRgForm((prev: any) => ({ ...prev, clave_elector: val.length === 18 ? val : '' }));
             else if (activeTab === 'casilla') setRcForm((prev: any) => ({ ...prev, clave_elector: val.length === 18 ? val : '' }));
           }}
