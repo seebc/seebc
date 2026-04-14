@@ -1036,7 +1036,7 @@ export default function App() {
                         <label className="input-label">Sección</label>
                         <select required className="select-field" value={rgForm.seccion_id} onChange={e => setRgForm({...rgForm, seccion_id: e.target.value})}>
                           <option value="">Seleccionar...</option>
-                          {secciones.filter(s => String(s.municipio_id) === rgForm.municipio_id).map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
+                          {secciones.filter(s => String(s.municipio_id) === rgForm.municipio_id).sort((a, b) => a.id - b.id).map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
                         </select>
                       </div>
                       <div>
