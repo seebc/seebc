@@ -320,7 +320,8 @@ export type Database = {
           id: number
           nombre_ruta: string
           representante_general_id: number | null
-          secciones_asignadas: Json
+          casillas_asignada: Json
+          municipio_id: number | null
         }
         Insert: {
           df_id?: number | null
@@ -328,7 +329,8 @@ export type Database = {
           id?: number
           nombre_ruta: string
           representante_general_id?: number | null
-          secciones_asignadas: Json
+          casillas_asignada: Json
+          municipio_id?: number | null
         }
         Update: {
           df_id?: number | null
@@ -336,7 +338,8 @@ export type Database = {
           id?: number
           nombre_ruta?: string
           representante_general_id?: number | null
-          secciones_asignadas?: Json
+          casillas_asignada?: Json
+          municipio_id?: number | null
         }
         Relationships: [
           {
