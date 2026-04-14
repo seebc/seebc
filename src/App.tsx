@@ -987,7 +987,7 @@ export default function App() {
                   handleEditRc={handleEditRc}
                 />
 
-                {(rgForm.clave_elector || editingRgId) && (
+                {mensajeValidacion === 'exito' && (
                   <form onSubmit={handleSaveRg} className="card p-6 lg:p-8 space-y-6 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-inst-600" />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1163,7 +1163,7 @@ export default function App() {
                   handleEditRc={handleEditRc}
                 />
 
-                {(rcForm.clave_elector || editingRcId) && (
+                {mensajeValidacion === 'exito' && (
                   <form onSubmit={handleSaveRc} className="card p-6 lg:p-8 space-y-6 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-warning-500" />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1484,7 +1484,7 @@ function ValidadorCredencial({
                    </p>
                  </div>
               </div>
-              <div className="space-y-2">
+              <div>
                  <button 
                    onClick={() => {
                      setMensajeValidacion(null);
@@ -1496,18 +1496,6 @@ function ValidadorCredencial({
                    className="btn-primary w-full"
                  >
                    Cerrar y Limpiar
-                 </button>
-                 <button 
-                   onClick={() => {
-                     const record = { ...credencialEncontrada };
-                     setMensajeValidacion(null);
-                     setCredencialEncontrada(null);
-                     if (record.casilla_id) handleEditRc(record);
-                     else handleEditRg(record);
-                   }}
-                   className="btn-secondary w-full"
-                 >
-                   Ver / Editar Registro Existente
                  </button>
               </div>
            </div>
