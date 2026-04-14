@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import \"tailwindcss\";
 
 @theme {
   /* Institutional Blue Palette */
@@ -128,7 +128,8 @@
   background: white;
   border: 1px solid var(--color-surface-200);
   border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
   font-size: 0.875rem;
   color: var(--color-surface-800);
   transition: all 0.2s;
