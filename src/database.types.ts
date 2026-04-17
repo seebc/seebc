@@ -6,12 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.4"
-  }
+export interface Database {
   public: {
     Tables: {
       casillas: {
@@ -20,15 +15,19 @@ export type Database = {
           casilla_id: number
           df: number | null
           dl: number | null
+          id: number
           municipio: number | null
+          seccion_id: number | null
           ubicación: string | null
         }
         Insert: {
           casilla?: string | null
-          casilla_id: number
+          casilla_id?: number
           df?: number | null
           dl?: number | null
+          id?: number
           municipio?: number | null
+          seccion_id?: number | null
           ubicación?: string | null
         }
         Update: {
@@ -36,74 +35,40 @@ export type Database = {
           casilla_id?: number
           df?: number | null
           dl?: number | null
+          id?: number
           municipio?: number | null
+          seccion_id?: number | null
           ubicación?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "casillas_df_fkey"
-            columns: ["df"]
-            isOneToOne: false
-            referencedRelation: "df"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casillas_dl_fkey"
-            columns: ["dl"]
-            isOneToOne: false
-            referencedRelation: "dl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casillas_municipio_fkey"
-            columns: ["municipio"]
-            isOneToOne: false
-            referencedRelation: "municipios"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       df: {
         Row: {
-          df: number
+          df: number | null
           id: number
-          municipio_id: number | null
         }
         Insert: {
-          df: number
+          df?: number | null
           id?: number
-          municipio_id?: number | null
         }
         Update: {
-          df?: number
+          df?: number | null
           id?: number
-          municipio_id?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_df_municipio"
-            columns: ["municipio_id"]
-            isOneToOne: false
-            referencedRelation: "municipios"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       dl: {
         Row: {
-          dl: number
+          dl: number | null
           id: number
-          municipio_id: number | null
         }
         Insert: {
-          dl: number
+          dl?: number | null
           id?: number
-          municipio_id?: number | null
         }
         Update: {
-          dl?: number
+          dl?: number | null
           id?: number
-          municipio_id?: number | null
         }
         Relationships: []
       }
@@ -156,7 +121,7 @@ export type Database = {
           calle?: string | null
           casilla_id?: number | null
           cic?: string | null
-          clave_elector?: string
+          clave_elector: string
           codigo_postal?: string | null
           colonia?: string | null
           correo_electronico?: string | null
@@ -169,13 +134,11 @@ export type Database = {
           nombre: string
           num_ext?: string | null
           num_int?: string | null
-          numero_credencial?: string
+          numero_credencial: string
           seccion_id: number
           telefono?: string | null
           tipo_nombramiento: Database["public"]["Enums"]["tipo_nombramiento"]
-          tipo_propaganda?:
-            | Database["public"]["Enums"]["tipo_propaganda"]
-            | null
+          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
         }
         Update: {
           apellido_materno?: string | null
@@ -201,26 +164,9 @@ export type Database = {
           seccion_id?: number
           telefono?: string | null
           tipo_nombramiento?: Database["public"]["Enums"]["tipo_nombramiento"]
-          tipo_propaganda?:
-            | Database["public"]["Enums"]["tipo_propaganda"]
-            | null
+          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_rc_fed"
-            columns: ["df_id"]
-            isOneToOne: false
-            referencedRelation: "df"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_rc_loc"
-            columns: ["dl_id"]
-            isOneToOne: false
-            referencedRelation: "dl"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       rg: {
         Row: {
@@ -253,7 +199,7 @@ export type Database = {
           autoriza_propaganda?: boolean
           calle?: string | null
           cic?: string | null
-          clave_elector?: string
+          clave_elector: string
           codigo_postal?: string | null
           colonia?: string | null
           correo_electronico?: string | null
@@ -266,12 +212,10 @@ export type Database = {
           nombre: string
           num_ext?: string | null
           num_int?: string | null
-          numero_credencial?: string
+          numero_credencial: string
           seccion_id: number
           telefono?: string | null
-          tipo_propaganda?:
-            | Database["public"]["Enums"]["tipo_propaganda"]
-            | null
+          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
         }
         Update: {
           apellido_materno?: string | null
@@ -295,26 +239,9 @@ export type Database = {
           numero_credencial?: string
           seccion_id?: number
           telefono?: string | null
-          tipo_propaganda?:
-            | Database["public"]["Enums"]["tipo_propaganda"]
-            | null
+          tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_rg_fed"
-            columns: ["df_id"]
-            isOneToOne: false
-            referencedRelation: "df"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_rg_loc"
-            columns: ["dl_id"]
-            isOneToOne: false
-            referencedRelation: "dl"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       rutas: {
         Row: {
@@ -344,22 +271,7 @@ export type Database = {
           casillas_asignada?: Json
           municipio_id?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_distrito_local"
-            columns: ["dl_id"]
-            isOneToOne: false
-            referencedRelation: "dl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rutas_representante_general_id_fkey"
-            columns: ["representante_general_id"]
-            isOneToOne: false
-            referencedRelation: "rg"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       secciones: {
         Row: {
@@ -371,7 +283,7 @@ export type Database = {
         Insert: {
           df_id?: number | null
           dl_id?: number | null
-          id: number
+          id?: number
           municipio_id?: number | null
         }
         Update: {
@@ -380,51 +292,29 @@ export type Database = {
           id?: number
           municipio_id?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_secciones_df"
-            columns: ["df_id"]
-            isOneToOne: false
-            referencedRelation: "df"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_secciones_dl"
-            columns: ["dl_id"]
-            isOneToOne: false
-            referencedRelation: "dl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_secciones_municipio"
-            columns: ["municipio_id"]
-            isOneToOne: false
-            referencedRelation: "municipios"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       usuarios: {
         Row: {
-          contrasena: string | null
-          correo: string | null
           id: number
-          municipio: number | null
-          usuario: string | null
+          usuario: string
+          password: string
+          rol: string | null
+          nombre_completo: string | null
         }
         Insert: {
-          contrasena?: string | null
-          correo?: string | null
           id?: number
-          municipio?: number | null
-          usuario?: string | null
+          usuario: string
+          password: string
+          rol?: string | null
+          nombre_completo?: string | null
         }
         Update: {
-          contrasena?: string | null
-          correo?: string | null
           id?: number
-          municipio?: number | null
-          usuario?: string | null
+          usuario?: string
+          password?: string
+          rol?: string | null
+          nombre_completo?: string | null
         }
         Relationships: []
       }
@@ -436,40 +326,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      tipo_casilla:
-        | "B"
-        | "C1"
-        | "C2"
-        | "C3"
-        | "C4"
-        | "C5"
-        | "C6"
-        | "C7"
-        | "C8"
-        | "C9"
-        | "C11"
-        | "C12"
-        | "C13"
-        | "C14"
-        | "C15"
-        | "E1"
-        | "E2"
-        | "E3"
-        | "E1C1"
-        | "E1C2"
-        | "E1C3"
-        | "E1C4"
-        | "E2C1"
-        | "E2C2"
-        | "E2C3"
-        | "E2C4"
-        | "E3C1"
-        | "E3C2"
-        | "S1"
-        | "S2"
-        | "S3"
       tipo_nombramiento: "Propietario" | "Suplente"
-      tipo_propaganda: "Lona" | "Pinta de Barda" | "Otro" | "Ninguno"
+      tipo_propaganda: "Ninguno" | "Lona" | "Pinta de Barda" | "Otro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -477,119 +335,83 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  PublicTableNameOrOptions extends
+    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+        Database[PublicTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+      PublicSchema["Views"])
+  ? (PublicSchema["Tables"] & PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+      Row: infer R
+    }
+    ? R
     : never
+  : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+      Insert: infer I
+    }
+    ? I
     : never
+  : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+      Update: infer U
+    }
+    ? U
     : never
+  : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  PublicEnumNameOrOptions extends
+    | keyof PublicSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+  : never

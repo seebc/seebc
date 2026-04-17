@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Users } from 'lucide-react';
 
 export const EmptyState = ({ message, icon: Icon = Users }: { message: string, icon?: any }) => (

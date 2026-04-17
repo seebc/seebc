@@ -126,7 +126,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   // --- UI y Navegación ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'padron' | 'rutas_form' | 'rutas_list' | 'reporte_cobertura' | 'reporte_rutas'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_cobertura' | 'reporte_rutas'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -136,7 +136,7 @@ export default function App() {
   const [credencialEncontrada, setCredencialEncontrada] = useState<any>(null);
 
   // --- Estados para Reportes Operativos ---
-  const [reporteOpTipo, setReporteOpTipo] = useState<'rg' | 'df' | 'dl'>('rg');
+  const [reporteOpTipo, setReporteOpTipo] = useState<'rg' | 'df' | 'dl' | 'municipio'>('rg');
   const [reporteOpValor, setReporteOpValor] = useState<string>('');
 
   // --- Formularios ---
@@ -854,7 +854,8 @@ export default function App() {
                             setReporteOpValor('');
                           }}
                         >
-                          <option value="rg">Responsable General (RG)</option>
+                          <option value="rg">General (RG)</option>
+                          <option value="municipio">Municipio</option>
                           <option value="df">Distrito Federal (DF)</option>
                           <option value="dl">Distrito Local (DL)</option>
                         </select>
@@ -869,6 +870,9 @@ export default function App() {
                           <option value="">— Elige una opción —</option>
                           {reporteOpTipo === 'rg' && [...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => (
                             <option key={rg.id} value={rg.id}>{rg.nombre} {rg.apellido_paterno}</option>
+                          ))}
+                          {reporteOpTipo === 'municipio' && [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => (
+                            <option key={m.id} value={m.id}>{m.municipio}</option>
                           ))}
                           {reporteOpTipo === 'df' && [...distritosFederales].sort((a,b) => (a.df || 0) - (b.df || 0)).map(df => (
                             <option key={df.id} value={df.id}>Distrito Federal {df.df}</option>
@@ -889,6 +893,7 @@ export default function App() {
                         <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2026</p>
                         <h3 className="text-xl font-bold text-surface-900">
                           {reporteOpTipo === 'rg' ? `RG: ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.nombre} ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.apellido_paterno}` : 
+                           reporteOpTipo === 'municipio' ? `Municipio: ${municipios.find(m => String(m.id) === reporteOpValor)?.municipio}` :
                            reporteOpTipo === 'df' ? `Distrito Federal ${distritosFederales.find(d => String(d.id) === reporteOpValor)?.df}` :
                            `Distrito Local ${distritosLocales.find(d => String(d.id) === reporteOpValor)?.dl}`}
                         </h3>
@@ -903,23 +908,26 @@ export default function App() {
                        <thead>
                           <tr>
                              <th>Casilla</th>
+                             {reporteOpTipo !== 'rg' && <th>RG</th>}
                              <th>Nombre del Representante</th>
                              <th>Tipo</th>
-                             <th className="text-center">DL / DF</th>
                              <th>Celular</th>
                              <th>Correo Electrónico</th>
+                             <th>Ubicación de Casilla</th>
                           </tr>
                        </thead>
                        <tbody>
                           {representantesCasilla
                             .filter(rc => {
+                              const cas = casillas.find(c => String(c.casilla_id) === String(rc.casilla_id));
                               if (reporteOpTipo === 'rg') {
                                 const ruta = rutas.find(r => 
                                   Array.isArray(r.casillas_asignada) && 
                                   r.casillas_asignada.map(String).includes(String(rc.casilla_id))
                                 );
-                                return String(ruta?.representante_general_id) === reporteOpValor;
+                                return String(ruta?.representante_general_id || '') === reporteOpValor;
                               }
+                              if (reporteOpTipo === 'municipio') return String(cas?.municipio || '') === reporteOpValor;
                               if (reporteOpTipo === 'df') return String(rc.df_id) === reporteOpValor;
                               if (reporteOpTipo === 'dl') return String(rc.dl_id) === reporteOpValor;
                               return false;
@@ -931,14 +939,23 @@ export default function App() {
                             })
                             .map(rc => {
                                const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+                               const ruta = rutas.find(r => 
+                                 Array.isArray(r.casillas_asignada) && 
+                                 r.casillas_asignada.map(String).includes(String(rc.casilla_id))
+                               );
+                               const rg = ruta ? representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id)) : null;
+
                                return (
                                  <tr key={rc.id}>
                                    <td><span className="font-semibold text-surface-900 whitespace-nowrap text-xs">{cas?.casilla || 'N/A'}</span></td>
+                                   {reporteOpTipo !== 'rg' && (
+                                     <td><span className="text-xs text-surface-600 uppercase font-medium">{rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</span></td>
+                                   )}
                                    <td><span className="font-semibold text-surface-800 uppercase text-xs">{rc.nombre} {rc.apellido_paterno} {rc.apellido_materno || ''}</span></td>
                                    <td><span className="text-xs text-surface-500">{rc.tipo_nombramiento}</span></td>
-                                   <td className="text-center"><span className="text-xs text-surface-500">{rc.dl_id} / {rc.df_id}</span></td>
                                    <td><span className="text-xs font-medium text-inst-600 font-mono">{rc.telefono || '—'}</span></td>
                                    <td><span className="text-xs text-surface-400 truncate max-w-[150px] inline-block">{rc.correo_electronico || '—'}</span></td>
+                                   <td><span className="text-[10px] text-surface-500 italic">{cas?.ubicación || '—'}</span></td>
                                  </tr>
                                );
                             })}
@@ -1657,7 +1674,7 @@ export default function App() {
                     </div>
                     <div>
                       <label className="input-label">Municipio (Filtro)</label>
-                      <select className="select-field" value={rutaForm.municipio_id} onChange={e => setRutaForm({...rutaForm, municipio_id: e.target.value})}>
+                      <select className="select-field" value={rutaForm.municipio_id} onChange={e => setRutaForm({...rutaForm, municipio_id: e.target.value, casillas_asignada: []})}>
                         <option value="">Todos los municipios...</option>
                         {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                       </select>
@@ -1674,14 +1691,14 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="input-label">Distrito Federal</label>
-                      <select className="select-field" value={rutaForm.df_id} onChange={e => setRutaForm({...rutaForm, df_id: e.target.value})}>
+                      <select className="select-field" value={rutaForm.df_id} onChange={e => setRutaForm({...rutaForm, df_id: e.target.value, casillas_asignada: []})}>
                         <option value="">Todos los distritos...</option>
                         {[...distritosFederales].sort((a,b) => (a.df || 0) - (b.df || 0)).map(d => <option key={d.id} value={d.id}>DF {d.df}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="input-label">Distrito Local</label>
-                      <select className="select-field" value={rutaForm.dl_id} onChange={e => setRutaForm({...rutaForm, dl_id: e.target.value})}>
+                      <select className="select-field" value={rutaForm.dl_id} onChange={e => setRutaForm({...rutaForm, dl_id: e.target.value, casillas_asignada: []})}>
                         <option value="">Todos los distritos...</option>
                         {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
                       </select>
@@ -2016,7 +2033,7 @@ function Sidebar({
         { id: 'casillas_list', label: 'Consultar', Icon: Vote },
       ]
     },
-    { id: 'padron', label: 'Padrón', Icon: Search },
+
     { 
       id: 'group_reportes', 
       label: 'Reportes', 
