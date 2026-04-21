@@ -3,11 +3,9 @@ import React from 'react';
 import { 
   Users, 
   ClipboardList, 
-  CheckCircle, 
-  AlertTriangle, 
-  TrendingUp, 
-  TrendingDown, 
-  MapPin 
+  CheckCircle,
+  AlertTriangle,
+  TrendingUp
 } from 'lucide-react';
 
 interface DashboardStatsProps {
