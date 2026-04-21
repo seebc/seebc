@@ -1818,12 +1818,12 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="text-center">Acciones</th>
                         <th>Casilla</th>
                         <th>Municipio</th>
                         <th>Distrito Federal</th>
                         <th>Distrito Local</th>
                         <th>Ubicación</th>
-                        <th className="text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1834,23 +1834,47 @@ export default function App() {
                           
                           const cname = (c.casilla || '').toLowerCase();
                           const cubi = (c.ubicación || '').toLowerCase();
+                          const muni = municipios.find(m => String(m.id) === String(c.municipio))?.municipio?.toLowerCase() || '';
+                          const df = `df ${c.df}`;
+                          const dl = `dl ${c.dl}`;
                           
-                          // Busqueda inteligente: todas las palabras buscadas deben estar presentes
                           const terms = search.split(/\s+/);
-                          return terms.every(t => cname.includes(t) || cubi.includes(t));
+                          return terms.every(t => 
+                            cname.includes(t) || 
+                            cubi.includes(t) || 
+                            muni.includes(t) || 
+                            df.includes(t) || 
+                            dl.includes(t)
+                          );
                         })
-                        .sort((a, b) => (a.casilla_id || 0) - (b.casilla_id || 0))
+                        .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || ''))
                         .map((cas) => (
                           <tr key={cas.casilla_id}>
+                            <td className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => handleEditCasilla(cas)} 
+                                  className="p-1.5 text-inst-600 hover:bg-inst-50 rounded-lg transition-colors" 
+                                  title="Editar Casilla"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteCasilla(cas.casilla_id)} 
+                                  className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
+                                  title="Eliminar Casilla"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
                             <td><span className="font-semibold text-inst-600 uppercase">{cas.casilla}</span></td>
                             <td><span className="text-sm text-surface-600">{municipios.find(m => String(m.id) === String(cas.municipio))?.municipio || 'N/A'}</span></td>
                             <td><span className="text-sm text-surface-600">{cas.df ? `DF ${cas.df}` : 'N/A'}</span></td>
                             <td><span className="text-sm text-surface-600">{cas.dl ? `DL ${cas.dl}` : 'N/A'}</span></td>
-                            <td><span className="text-sm text-surface-600 truncate block max-w-xs" title={cas.ubicación || ''}>{cas.ubicación || '—'}</span></td>
-                            <td className="text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <button onClick={() => handleEditCasilla(cas)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => handleDeleteCasilla(cas.casilla_id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                            <td>
+                              <div className="text-xs text-surface-600 max-w-md break-words" title={cas.ubicación || ''}>
+                                {cas.ubicación || '—'}
                               </div>
                             </td>
                           </tr>
