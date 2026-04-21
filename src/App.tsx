@@ -2468,27 +2468,6 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
     setErrorMsg(null);
 
     try {
-      // --- SEGURIDAD 5.0: ACCESO DE EMERGENCIA ADMINISTRATIVO ---
-      // Si el motor de Auth falla por esquema, permitimos entrar con una llave local cifrada
-      const isEmergencyBypass = usuario.toLowerCase().trim() === 'fcorascon' && password === '**xmiswebs**';
-      
-      if (isEmergencyBypass) {
-        toast('Acceso de Emergencia Activado: Cargando...', { icon: '🔐' });
-        
-        // --- PERFIL VIRTUAL DE RESCATE ---
-        // Creamos un objeto de perfil manual para saltarnos el error de esquema
-        const virtualAdminProfile = {
-          id: 0,
-          usuario: 'fcorascon',
-          nombre_completo: 'Administrador (Modo Rescate)',
-          rol: 'ADMIN' // Usamos el string que el frontend espera para habilitar todo
-        };
-
-        toast.success(`Bienvenido, ${virtualAdminProfile.nombre_completo}`);
-        onLoginSuccess(virtualAdminProfile);
-        return;
-      }
-
       // 1. Intentar Login con Supabase Auth (Normal)
       const email = usuario.includes('@') ? usuario : `${usuario.toLowerCase().trim()}@seebc.com`;
       const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
@@ -2514,7 +2493,7 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
         .single();
 
       if (profileError || !profile) {
-        throw new Error('Perfil de usuario no encontrado.');
+        throw new Error('Perfil de usuario no encontrado en la base de datos de gestión.');
       }
 
       toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
