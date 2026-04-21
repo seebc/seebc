@@ -1,35 +1,52 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import { 
-  Users, 
-  Search, 
-  LayoutDashboard, 
-  ClipboardList, 
-  CheckCircle, 
-  AlertTriangle,
+  Edit2, 
+  Trash2, 
+  LayoutDashboard,
+  Users,
   UserCircle,
-  Briefcase,
-  ChevronDown,
-  ChevronUp,
-  LogOut,
-  Trash2,
-  Edit2,
-  FileText,
+  ClipboardList,
+  Route,
+  Search,
+  Vote,
   BarChart2,
-  Printer,
+  Settings,
+  Bell,
+  CheckCircle,
+  AlertTriangle,
+  LogIn,
   Shield,
   Eye,
   EyeOff,
-  LogIn,
-  Route,
-  Vote,
-  Bell,
+  MoreVertical,
+  ChevronDown,
+  MapPin,
   TrendingUp,
+  FileText,
+  UserPlus,
+  X,
   Menu,
-  X
+  ChevronRight,
+  Clock,
+  LogOut,
+  Download,
+  Plus,
+  Key
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Tables } from './database.types';
+
+// Importar componentes modulares
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import DashboardStats from './components/DashboardStats';
+import ValidadorCredencial from './components/ValidadorCredencial';
+import { 
+  SkeletonTable,
+  SkeletonDashboard
+} from './components/UI';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 type Casilla = Tables<'casillas'>;
 type DistritoFederal = Tables<'df'>;
@@ -40,11 +57,6 @@ type RepresentanteGeneral = Tables<'rg'>;
 type Seccion = Tables<'secciones'>;
 type Ruta = Tables<'rutas'>;
 type UsuarioManual = Tables<'usuarios'>;
-import { 
-  SkeletonTable,
-  SkeletonDashboard
-} from './components/UI';
-import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 // --- Constantes y Validaciones ---
 const CLAVE_ELECTOR_REGEX = /^[A-Z]{6}\d{8}[HM]\d{3}$/;
@@ -773,7 +785,7 @@ export default function App() {
 
       {/* Sidebar */}
       <Sidebar 
-        activeTab={activeTab} 
+        activeTab={activeTab}
         handleTabClick={handleTabClick}
         currentUser={currentUser}
         onLogout={handleLogout}
@@ -781,71 +793,17 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-      {/* Top Bar */}
-      <header className="h-16 bg-white border-b border-surface-200 flex items-center justify-between px-4 lg:px-8 z-10 no-print flex-shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="btn-icon lg:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Breadcrumb / Page Title */}
-          <div className="hidden sm:flex items-center gap-2 text-sm">
-            <span className="text-surface-400">SEEBC</span>
-            <span className="text-surface-300">/</span>
-            <span className="font-semibold text-surface-800">{tabTitles[activeTab] || 'Dashboard'}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-              <input 
-                type="text" 
-                placeholder="BUSCAR REGISTROS..." 
-                className="bg-surface-50 border border-surface-200 pl-10 pr-4 py-2 rounded-none w-64 text-sm focus:outline-none focus:ring-2 focus:ring-inst-500/20 focus:border-inst-500 transition-all placeholder:text-surface-400 uppercase"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
-              />
-          </div>
-
-          <div className="h-6 w-px bg-surface-200 hidden md:block" />
-
-          {/* Notifications */}
-          <button className="btn-icon relative">
-            <Bell className="w-5 h-5" />
-            {casillasSinCobertura > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                !
-              </span>
-            )}
-          </button>
-
-          {/* System Status */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-success-50 rounded-lg">
-            <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
-            <span className="text-xs font-medium text-success-700">Operativo</span>
-          </div>
-
-          <div className="h-6 w-px bg-surface-200" />
-
-          {/* User Avatar */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-inst-100 rounded-lg flex items-center justify-center text-sm font-bold text-inst-700">
-              {currentUser?.usuario?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <div className="hidden lg:block">
-              <p className="text-sm font-semibold text-surface-800 leading-none">{currentUser?.usuario || 'Invitado'}</p>
-              <p className="text-[11px] text-surface-400 mt-0.5">{currentUser?.rol === 'ADMIN' ? 'Administrador' : 'Capturista'}</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="flex-1 flex flex-col min-w-0 bg-surface-50 overflow-hidden">
+        {/* Header */}
+        <Header 
+          activeTab={activeTab}
+          tabTitles={tabTitles}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          casillasSinCobertura={casillasSinCobertura}
+          currentUser={currentUser}
+          onOpenSidebar={() => setSidebarOpen(true)}
+        />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
@@ -863,57 +821,12 @@ export default function App() {
                 </div>
 
                 {/* Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger-children">
-                  {/* RG Count */}
-                  <div className="card-metric hover-lift group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-inst-50 rounded-lg flex items-center justify-center group-hover:bg-inst-100 transition-colors">
-                        <Users className="w-5 h-5 text-inst-600" />
-                      </div>
-                      <span className="badge-info">
-                        <TrendingUp className="w-3 h-3" />+12%
-                      </span>
-                    </div>
-                    <p className="text-3xl font-bold text-surface-900">{representantesGenerales.length}</p>
-                    <p className="text-xs text-surface-500 mt-1 font-medium">Representantes Generales</p>
-                  </div>
-
-                  {/* RC Count */}
-                  <div className="card-metric hover-lift group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-warning-50 rounded-lg flex items-center justify-center group-hover:bg-warning-100 transition-colors">
-                        <ClipboardList className="w-5 h-5 text-warning-600" />
-                      </div>
-                      <span className="badge-warning">Meta: 90%</span>
-                    </div>
-                    <p className="text-3xl font-bold text-surface-900">{representantesCasilla.length}</p>
-                    <p className="text-xs text-surface-500 mt-1 font-medium">Representantes de Casilla</p>
-                  </div>
-
-                  {/* Cobertura */}
-                  <div className="card-metric hover-lift group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-success-50 rounded-lg flex items-center justify-center group-hover:bg-success-100 transition-colors">
-                        <CheckCircle className="w-5 h-5 text-success-600" />
-                      </div>
-                      <span className="badge-success">Activo</span>
-                    </div>
-                    <p className="text-3xl font-bold text-surface-900">{coberturaEstatal}%</p>
-                    <p className="text-xs text-surface-500 mt-1 font-medium">Cobertura Estatal</p>
-                  </div>
-
-                  {/* Sin Cobertura */}
-                  <div className="card-metric hover-lift group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 bg-danger-50 rounded-lg flex items-center justify-center group-hover:bg-danger-100 transition-colors">
-                        <AlertTriangle className="w-5 h-5 text-danger-600" />
-                      </div>
-                      <span className="badge-danger">Prioridad</span>
-                    </div>
-                    <p className="text-3xl font-bold text-danger-600">{casillasSinCobertura}</p>
-                    <p className="text-xs text-surface-500 mt-1 font-medium">Casillas sin Cobertura</p>
-                  </div>
-                </div>
+                <DashboardStats 
+                  rgCount={representantesGenerales.length}
+                  rcCount={representantesCasilla.length}
+                  casillasCount={casillas.length}
+                  casillasSinCobertura={casillasSinCobertura}
+                />
 
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2227,314 +2140,6 @@ export default function App() {
   );
 }
 
-// --- Sub-componente Validador ---
-function ValidadorCredencial({ 
-  tipo,
-  onSuccess,
-  credencialValidacion, 
-  setCredencialValidacion, 
-  mensajeValidacion, 
-  setMensajeValidacion, 
-  credencialEncontrada, 
-  setCredencialEncontrada,
-  representantesGenerales, 
-  representantesCasilla, 
-  editingRgId, 
-  editingRcId
-}: any) {
-  const isRG = tipo === 'rg';
-  
-  return (
-    <div className="card p-6 relative overflow-hidden">
-      <div className="flex items-center gap-4 mb-5">
-        <div className={`w-10 h-10 ${isRG ? 'bg-inst-600' : 'bg-warning-600'} rounded-lg flex items-center justify-center`}>
-          <Search className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-surface-800">Validador de Credencial</h3>
-          <p className="text-xs text-surface-400">Verifica duplicidad para {isRG ? 'RG' : 'RC'}</p>
-        </div>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          value={credencialValidacion}
-          onChange={(e) => {
-            const val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 18);
-            setCredencialValidacion(val);
-            setMensajeValidacion(null);
-            setCredencialEncontrada(null);
-          }}
-          placeholder="INGRESA CLAVE DE ELECTOR (18 CARACTERES)"
-          className="input-field flex-1 font-mono tracking-widest text-base"
-          maxLength={18}
-        />
-        <button
-          onClick={() => {
-            if (credencialValidacion.length === 0) {
-              toast.error('Ingresa la clave de elector');
-              return;
-            }
-            if (credencialValidacion.length !== 18) {
-              toast.error(`Incompleta: faltan ${18 - credencialValidacion.length} caracteres`);
-              return;
-            }
-            if (!CLAVE_ELECTOR_REGEX.test(credencialValidacion)) {
-              toast.error('Formato inválido (6L, 8N, H/M, 3N)');
-              return;
-            }
-            const encontrada = [...representantesGenerales, ...representantesCasilla].find((r: any) => 
-              r.clave_elector === credencialValidacion && 
-              r.id !== (isRG ? editingRgId : editingRcId)
-            );
-            if (encontrada) {
-              setCredencialEncontrada(encontrada);
-              setMensajeValidacion('advertencia');
-            } else {
-              setCredencialEncontrada(null);
-              setMensajeValidacion('exito');
-              toast.success('Clave validada');
-              onSuccess(credencialValidacion);
-            }
-          }}
-          className="btn-primary whitespace-nowrap"
-        >
-          Validar Clave
-        </button>
-      </div>
-
-      {/* Success message */}
-      {mensajeValidacion === 'exito' && (
-        <div className="mt-4 p-4 bg-success-50 border border-success-100 rounded-lg flex items-center gap-3 animate-fade-in-up">
-          <CheckCircle className="w-5 h-5 text-success-600 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-success-700 text-sm">Disponible</p>
-            <p className="text-success-600 text-xs">Clave no registrada. Puedes continuar con la captura.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Duplicate Alert Modal */}
-      {mensajeValidacion === 'advertencia' && credencialEncontrada && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-surface-900/60 backdrop-blur-sm p-6 no-print animate-fade-in-up">
-           <div className="card p-8 max-w-md w-full text-center space-y-6 animate-scale-in shadow-2xl">
-              <div className="bg-danger-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto">
-                 <AlertTriangle className="w-8 h-8 text-danger-600" />
-              </div>
-              <div className="space-y-3">
-                 <div>
-                    <p className="text-xs font-semibold text-danger-600 uppercase tracking-wider mb-1">Alerta de Seguridad</p>
-                    <h3 className="text-xl font-bold text-surface-900">Clave Duplicada</h3>
-                 </div>
-                 <div className="bg-surface-50 p-4 rounded-lg">
-                    <p className="text-surface-900 font-bold uppercase">{credencialEncontrada.nombre} {credencialEncontrada.apellido_paterno}</p>
-                    <p className="text-surface-500 text-xs mt-1">
-                      Asignado como: <span className="font-semibold text-surface-700">{credencialEncontrada.casilla_id ? 'Rep. de Casilla' : 'Rep. General'}</span>
-                    </p>
-                 </div>
-              </div>
-              <div>
-                 <button 
-                   onClick={() => {
-                     setMensajeValidacion(null);
-                     setCredencialEncontrada(null);
-                     setCredencialValidacion('');
-                   }}
-                   className="btn-primary w-full"
-                 >
-                   Cerrar y Limpiar
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// --- Sidebar ---
-function Sidebar({ 
-  activeTab, 
-  handleTabClick,
-  currentUser,
-  onLogout,
-  isOpen,
-  onClose
-}: { 
-  activeTab: string; 
-  handleTabClick: (id: string) => void;
-  currentUser: any;
-  onLogout: () => void;
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-
-  const toggleGroup = (groupId: string) => {
-    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-  };
-
-  const navigationItems = [
-    { id: 'dashboard', label: 'Inicio', Icon: LayoutDashboard },
-    { 
-      id: 'group_generales', 
-      label: 'Generales', 
-      Icon: Briefcase,
-      isGroup: true,
-      subItems: [
-        { id: 'generales', label: 'Nuevo RG', Icon: UserCircle },
-        { id: 'listado_rg', label: 'Listado RG', Icon: Users },
-      ]
-    },
-    { 
-      id: 'group_casillas', 
-      label: 'Rep. Casillas', 
-      Icon: ClipboardList,
-      isGroup: true,
-      subItems: [
-        { id: 'casilla', label: 'Nuevo RC', Icon: UserCircle },
-        { id: 'listado_rc', label: 'Listado RC', Icon: Users },
-      ]
-    },
-    { 
-      id: 'group_rutas', 
-      label: 'Rutas', 
-      Icon: Route,
-      isGroup: true,
-      subItems: [
-        { id: 'rutas_form', label: 'Capturar Ruta', Icon: Search },
-        { id: 'rutas_list', label: 'Listado Rutas', Icon: Route },
-      ]
-    },
-    { 
-      id: 'group_casillas_cat', 
-      label: 'Casillas', 
-      Icon: Vote,
-      isGroup: true,
-      subItems: [
-        { id: 'casillas_form', label: 'Capturar', Icon: Search },
-        { id: 'casillas_list', label: 'Consultar', Icon: Vote },
-      ]
-    },
-
-    { 
-      id: 'group_reportes', 
-      label: 'Reportes', 
-      Icon: BarChart2,
-      isGroup: true,
-      subItems: [
-        { id: 'reporte_rutas', label: 'Listados Op.', Icon: FileText },
-      ]
-    },
-    ...(currentUser.rol === 'ADMIN' ? [{
-      id: 'group_admin', 
-      label: 'Administración', 
-      Icon: Shield,
-      isGroup: true,
-      subItems: [
-        { id: 'usuarios_mgmt', label: 'Usuarios', Icon: Users },
-      ]
-    }] : []),
-  ];
-
-  return (
-    <aside className={`
-      w-64 bg-white border-r border-surface-200 flex flex-col h-screen flex-shrink-0 no-print
-      fixed lg:sticky top-0 z-50 transition-transform duration-300
-      ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-    `}>
-      {/* Logo Area */}
-      <div className="h-16 px-5 border-b border-surface-200 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-inst-600 rounded-lg flex items-center justify-center shadow-sm">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L4 5v6.5c0 5 3.5 9.5 8 10.5 4.5-1 8-5.5 8-10.5V5l-8-3zM12 11c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-surface-900">SEEBC <span className="text-inst-600">2027</span></h1>
-            <p className="text-[10px] text-surface-400 font-medium">Plataforma Electoral</p>
-          </div>
-        </div>
-        {/* Close button - mobile only */}
-        <button onClick={onClose} className="btn-icon lg:hidden">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto mt-2">
-        {navigationItems.map(item => (
-          <div key={item.id}>
-            {item.isGroup ? (
-              <>
-                <button
-                  onClick={() => toggleGroup(item.id)}
-                  className={`sidebar-link group ${openGroups[item.id] ? 'text-surface-800' : 'text-surface-500 hover:text-surface-800 hover:bg-surface-50'}`}
-                >
-                  <item.Icon className="w-[18px] h-[18px]" />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {openGroups[item.id] ? <ChevronUp className="w-4 h-4 text-surface-400" /> : <ChevronDown className="w-4 h-4 text-surface-400" />}
-                </button>
-                
-                {openGroups[item.id] && (
-                  <div className="ml-5 pl-3 border-l border-surface-100 space-y-0.5 mt-0.5 mb-1">
-                    {item.subItems?.map(sub => (
-                      <button
-                        key={sub.id}
-                        onClick={() => handleTabClick(sub.id)}
-                        className={`sidebar-link text-[13px] ${
-                          activeTab === sub.id 
-                          ? 'sidebar-link-active' 
-                          : 'sidebar-link-inactive'
-                        }`}
-                      >
-                        <sub.Icon className="w-4 h-4" />
-                        <span>{sub.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item.id)}
-                className={`sidebar-link ${
-                  activeTab === item.id 
-                  ? 'sidebar-link-active' 
-                  : 'sidebar-link-inactive'
-                }`}
-              >
-                <item.Icon className="w-[18px] h-[18px]" />
-                <span>{item.label}</span>
-              </button>
-            )}
-          </div>
-        ))}
-      </nav>
-
-      {/* User Footer */}
-      <div className="p-3 border-t border-surface-200">
-        <div className="flex items-center gap-3 p-2">
-          <div className="w-9 h-9 bg-inst-50 rounded-lg flex items-center justify-center text-sm font-semibold text-inst-700">
-            {currentUser?.usuario?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-surface-800 truncate">{currentUser?.usuario || 'Invitado'}</p>
-            <p className="text-[11px] text-success-600 flex items-center gap-1.5 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-success-500"></span> En línea
-            </p>
-          </div>
-          <button onClick={onLogout} className="btn-icon" title="Cerrar Sesión">
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </aside>
-  );
-}
 
 // --- Componente Login ---
 function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
