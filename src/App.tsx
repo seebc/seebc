@@ -228,17 +228,46 @@ export default function App() {
 
   useSessionTimeout(handleLogout, !!currentUser);
 
-  // --- Carga de Datos ---
+  // --- Carga de Datos con Paginación ---
+  const fetchAllFromTable = async (tableName: string, batchSize = 1000) => {
+    let allData: any[] = [];
+    let from = 0;
+    let to = batchSize - 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .range(from, to)
+        .order(tableName === 'rutas' ? 'nombre_ruta' : tableName === 'casillas' ? 'casilla' : 'nombre', { ascending: true });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        if (data.length < batchSize) {
+          hasMore = false;
+        } else {
+          from += batchSize;
+          to += batchSize;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    return allData;
+  };
+
   const fetchData = async () => {
     if (!currentUser) return;
     setIsLoading(true);
 
     try {
-      // 1. Cargar Usuarios (Solo si es ADMIN la política lo permitirá)
+      // 1. Cargar Usuarios
       const { data: usersData } = await supabase.from('usuarios').select('*');
       if (usersData) setUsuarios(usersData);
 
-      // 2. Cargar Catálogos (Públicos o Autenticados)
+      // 2. Cargar Catálogos (Pequeños, no necesitan paginación usualmente)
       const [dfRes, dlRes, munRes, secRes] = await Promise.all([
         supabase.from('df').select('*'),
         supabase.from('dl').select('*'),
@@ -251,18 +280,18 @@ export default function App() {
       if (munRes.data) setMunicipios(munRes.data);
       if (secRes.data) setSecciones(secRes.data);
 
-      // 3. Cargar Datos Operativos (RLS filtrará automáticamente si no es ADMIN)
-      const [rgRes, rcRes, rutasRes, casRes] = await Promise.all([
-        supabase.from('rg').select('*').order('nombre', { ascending: true }).limit(6000),
-        supabase.from('rc').select('*').order('nombre', { ascending: true }).limit(6000),
-        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }).limit(6000),
-        supabase.from('casillas').select('*').order('casilla', { ascending: true }).limit(6000)
+      // 3. Cargar Datos Operativos con Paginación para romper el límite de 1000
+      const [rgData, rcData, rutasData, casData] = await Promise.all([
+        fetchAllFromTable('rg'),
+        fetchAllFromTable('rc'),
+        fetchAllFromTable('rutas'),
+        fetchAllFromTable('casillas')
       ]);
 
-      if (rgRes.data) setRepresentantesGenerales(rgRes.data);
-      if (rcRes.data) setRepresentantesCasilla(rcRes.data);
-      if (rutasRes.data) setRutas(rutasRes.data);
-      if (casRes.data) setCasillas(casRes.data);
+      setRepresentantesGenerales(rgData);
+      setRepresentantesCasilla(rcData);
+      setRutas(rutasData);
+      setCasillas(casData);
     } catch (error: any) {
       console.error("Error fetching data:", error);
     } finally {
