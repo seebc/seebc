@@ -704,13 +704,7 @@ export default function App() {
     <>
       <Toaster 
         position="top-center" 
-        containerStyle={{
-          top: '50%',
-          left: '50%',
-          bottom: 'auto',
-          right: 'auto',
-          transform: 'translate(-50%, -50%)'
-        }}
+        containerClassName="center-toaster"
         toastOptions={{ 
           style: { borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '13px', fontWeight: '500', fontFamily: 'Inter, sans-serif' },
           success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
