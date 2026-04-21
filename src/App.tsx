@@ -1501,21 +1501,15 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label className="input-label">Sección</label>
-                        <select required className="select-field" value={rcForm.seccion_id} onChange={e => setRcForm({...rcForm, seccion_id: e.target.value})}>
-                          <option value="">Seleccionar...</option>
-                          {secciones.filter(s => String(s.municipio_id) === rcForm.municipio_id).sort((a,b) => a.id - b.id).map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
-                        </select>
-                      </div>
-                      <div>
                          <label className="input-label">Casilla Asignada</label>
                          <select required className="select-field" value={rcForm.casilla_id} onChange={e => {
                            const cas = casillas.find(c => String(c.casilla_id) === e.target.value);
                            setRcForm({
                              ...rcForm, 
                              casilla_id: e.target.value,
-                             df_id: cas ? String(cas.df) : rcForm.df_id,
-                             dl_id: cas ? String(cas.dl) : rcForm.dl_id
+                             seccion_id: cas?.seccion_id ? String(cas.seccion_id) : '',
+                             df_id: cas?.df ? String(cas.df) : rcForm.df_id,
+                             dl_id: cas?.dl ? String(cas.dl) : rcForm.dl_id
                            });
                          }}>
                            <option value="">Seleccionar...</option>
@@ -1524,6 +1518,10 @@ export default function App() {
                              .sort((a,b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, {numeric: true}))
                              .map(c => <option key={c.casilla_id} value={c.casilla_id}>{c.casilla}</option>)}
                          </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Sección (Automática)</label>
+                        <input type="text" readOnly className="input-field bg-surface-50 text-surface-400 cursor-not-allowed" value={rcForm.seccion_id || ''} placeholder="Se autocompleta" />
                       </div>
                     </div>
 
