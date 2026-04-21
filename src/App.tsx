@@ -195,7 +195,7 @@ export default function App() {
   // --- Lógica de Auth ---
   useEffect(() => {
     // 1. Escuchar cambios en la sesión de Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         // Al obtener sesión, buscamos el perfil extendido (rol, etc) en public.usuarios
         const { data: profile } = await supabase
@@ -219,13 +219,13 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
     localStorage.removeItem('seebc_user');
     setActiveTab('dashboard');
     toast.success('Sesión cerrada');
-  };
+  }, []);
 
   const handleLoginSuccess = (user: any) => {
     // La sesión la maneja ahora onAuthStateChange de forma centralizada
@@ -260,10 +260,10 @@ export default function App() {
 
       // 3. Cargar Datos Operativos (RLS filtrará automáticamente si no es ADMIN)
       const [rgRes, rcRes, rutasRes, casRes] = await Promise.all([
-        supabase.from('rg').select('*').order('nombre', { ascending: true }),
-        supabase.from('rc').select('*').order('nombre', { ascending: true }),
-        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }),
-        supabase.from('casillas').select('*').order('casilla', { ascending: true })
+        supabase.from('rg').select('*').order('nombre', { ascending: true }).limit(5000),
+        supabase.from('rc').select('*').order('nombre', { ascending: true }).limit(5000),
+        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }).limit(5000),
+        supabase.from('casillas').select('*').order('casilla', { ascending: true }).limit(5000)
       ]);
 
       if (rgRes.data) setRepresentantesGenerales(rgRes.data);
@@ -277,27 +277,30 @@ export default function App() {
     }
   };
 
-  const handleTabClick = useCallback((itemId: string) => {
-    setActiveTab(itemId as any);
+  const handleTabClick = useCallback((tabId: string) => {
     setSidebarOpen(false);
     setEditingRgId(null);
     setEditingRcId(null);
     setEditingRutaId(null);
     setEditingCasillaIntId(null);
+    setEditingUserId(null);
+    setRgValidado(false);
+    setRcValidado(false);
     setCredencialValidacion('');
     setMensajeValidacion(null);
     setCredencialEncontrada(null);
-    setRgValidado(false);
-    setRcValidado(false);
     setCasillaSearch('');
-    if (itemId === 'generales') {
+    setSearchTerm('');
+    setActiveTab(tabId as any);
+
+    if (tabId === 'generales') {
       setRgForm({
         nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
         municipio_id: '', df_id: '', dl_id: '', seccion_id: '', credencial_vigente: true, es_militante: false,
         calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
         autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
       });
-    } else if (itemId === 'casilla') {
+    } else if (tabId === 'casilla') {
       setRcForm({
         nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
         municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '',
@@ -305,7 +308,7 @@ export default function App() {
         calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
         autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
       });
-    } else if (itemId === 'rutas_form') {
+    } else if (tabId === 'rutas_form') {
       if (!editingRutaId) {
         setRutaForm({ 
           nombre_ruta: '', 
@@ -316,7 +319,7 @@ export default function App() {
           municipio_id: ''
         });
       }
-    } else if (itemId === 'usuarios_mgmt') {
+    } else if (tabId === 'usuarios_mgmt') {
       setEditingUserId(null);
       setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA' });
       setShowUserPassword(false);
@@ -359,7 +362,7 @@ export default function App() {
         correo_electronico: payload.correo_electronico?.toLowerCase().trim() || null,
         df_id: parseInt(payload.df_id),
         dl_id: parseInt(payload.dl_id),
-        seccion_id: parseInt(payload.seccion_id),
+        seccion_id: parseInt(payload.seccion_id) || 0,
         capturista_id: user.id // Forzado
       };
 
@@ -403,10 +406,21 @@ export default function App() {
   };
 
   const handleDeleteRg = async (id: number) => {
+    // Verificar dependencias: ¿tiene rutas asignadas?
+    const rutasAsociadas = rutas.filter(r => String(r.representante_general_id) === String(id));
+    if (rutasAsociadas.length > 0) {
+      toast.error(`No se puede eliminar: este RG tiene ${rutasAsociadas.length} ruta(s) asignada(s). Elimina o reasigna las rutas primero.`);
+      return;
+    }
     if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-    const { error } = await supabase.from('rg').delete().eq('id', id);
-    if (error) toast.error('Error al eliminar');
-    else { toast.success('Registro eliminado'); fetchData(); }
+    try {
+      const { error } = await supabase.from('rg').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Registro eliminado');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Error al eliminar: ' + (error?.message || 'Revisa dependencias'));
+    }
   };
 
   // --- Handlers: Representantes de Casilla ---
@@ -434,7 +448,7 @@ export default function App() {
         casilla_id: payload.casilla_id ? parseInt(payload.casilla_id) : null,
         df_id: parseInt(payload.df_id),
         dl_id: parseInt(payload.dl_id),
-        seccion_id: parseInt(payload.seccion_id),
+        seccion_id: parseInt(payload.seccion_id) || 0,
         capturista_id: user.id // Forzado
       };
 
@@ -459,10 +473,12 @@ export default function App() {
 
   const handleEditRc = (rc: any) => {
     setEditingRcId(rc.id);
+    // Derivar municipio_id desde la casilla asignada (la tabla RC no tiene municipio_id)
+    const casillaAsociada = casillas.find(c => String(c.casilla_id) === String(rc.casilla_id));
     setRcForm({
       nombre: rc.nombre, apellido_paterno: rc.apellido_paterno, apellido_materno: rc.apellido_materno || '',
       clave_elector: rc.clave_elector, numero_credencial: rc.numero_credencial || '', cic: rc.cic || '',
-      municipio_id: rc.municipio_id ? String(rc.municipio_id) : '', 
+      municipio_id: casillaAsociada?.municipio ? String(casillaAsociada.municipio) : '', 
       df_id: rc.df_id ? String(rc.df_id) : '', 
       dl_id: rc.dl_id ? String(rc.dl_id) : '', 
       seccion_id: rc.seccion_id ? String(rc.seccion_id) : '',
@@ -481,9 +497,14 @@ export default function App() {
 
   const handleDeleteRc = async (id: number) => {
     if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
-    const { error } = await supabase.from('rc').delete().eq('id', id);
-    if (error) toast.error('Error al eliminar');
-    else { toast.success('Registro eliminado'); fetchData(); }
+    try {
+      const { error } = await supabase.from('rc').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Registro eliminado');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Error al eliminar: ' + (error?.message || 'Error desconocido'));
+    }
   };
 
   // --- Handlers: Rutas ---
@@ -542,9 +563,14 @@ export default function App() {
 
   const handleDeleteRuta = async (id: number) => {
     if (!confirm('¿Seguro que deseas eliminar esta ruta?')) return;
-    const { error } = await supabase.from('rutas').delete().eq('id', id);
-    if (error) toast.error('Error al eliminar');
-    else { toast.success('Ruta eliminada'); fetchData(); }
+    try {
+      const { error } = await supabase.from('rutas').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Ruta eliminada');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Error al eliminar ruta: ' + (error?.message || 'Error desconocido'));
+    }
   };
 
   // --- Handlers: Casillas ---
@@ -602,10 +628,29 @@ export default function App() {
   };
 
   const handleDeleteCasilla = async (casilla_id: number) => {
-    if (!confirm('¿Seguro que deseas eliminar esta casilla? Se perderán las asociaciones con RC y Rutas.')) return;
-    const { error } = await supabase.from('casillas').delete().eq('casilla_id', casilla_id);
-    if (error) toast.error('Error al eliminar: ' + error.message);
-    else { toast.success('Casilla eliminada'); fetchData(); }
+    // Verificar dependencias: ¿tiene RCs o rutas asignadas?
+    const rcsAsociados = representantesCasilla.filter(rc => String(rc.casilla_id) === String(casilla_id));
+    if (rcsAsociados.length > 0) {
+      toast.error(`No se puede eliminar: esta casilla tiene ${rcsAsociados.length} representante(s) asignado(s). Elimina los RC primero.`);
+      return;
+    }
+    const rutasAsociadas = rutas.filter(r => 
+      Array.isArray(r.casillas_asignada) && 
+      (r.casillas_asignada as any[]).map(String).includes(String(casilla_id))
+    );
+    if (rutasAsociadas.length > 0) {
+      toast.error(`No se puede eliminar: esta casilla está asignada a ${rutasAsociadas.length} ruta(s). Desasígnala primero.`);
+      return;
+    }
+    if (!confirm('¿Seguro que deseas eliminar esta casilla?')) return;
+    try {
+      const { error } = await supabase.from('casillas').delete().eq('casilla_id', casilla_id);
+      if (error) throw error;
+      toast.success('Casilla eliminada');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Error al eliminar casilla: ' + (error?.message || 'Revisa dependencias en la BD'));
+    }
   };
 
   // --- Handlers: Usuarios ---
@@ -670,16 +715,20 @@ export default function App() {
       return;
     }
     if (!confirm('¿Seguro que deseas eliminar este usuario? Sus capturas quedarán sin autor asignado.')) return;
-    
-    // El trigger/constraint de base de datos se encargará de poner capturista_id = NULL
-    const { error } = await supabase.from('usuarios').delete().eq('id', id);
-    if (error) toast.error('Error al eliminar usuario');
-    else { toast.success('Usuario eliminado'); fetchData(); }
+    try {
+      const { error } = await supabase.from('usuarios').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Usuario eliminado');
+      fetchData();
+    } catch (error: any) {
+      toast.error('Error al eliminar usuario: ' + (error?.message || 'Puede tener registros asociados. Contacta al administrador.'));
+    }
   };
 
   // --- Cálculos de métricas ---
-  const coberturaEstatal = Math.round((representantesCasilla.length / (casillas.length || 1)) * 100);
-  const casillasSinCobertura = casillas.length - Array.from(new Set(representantesCasilla.map(rc => rc.casilla_id))).length;
+  const coberturaEstatal = Math.min(100, Math.round((Array.from(new Set(representantesCasilla.map(rc => rc.casilla_id))).length / (casillas.length || 1)) * 100));
+  const casillasConRepresentante = new Set(representantesCasilla.map(rc => String(rc.casilla_id)));
+  const casillasSinCobertura = casillas.length - casillasConRepresentante.size;
 
   if (authChecking) return null;
   if (!currentUser) return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -928,7 +977,7 @@ export default function App() {
                             .slice(0, 50)
                             .map(c => (
                               <tr key={c.casilla_id}>
-                                <td><span className="font-semibold text-surface-800">{c.casilla?.split(' ')[0]}</span></td>
+                                <td><span className="font-semibold text-surface-800">{c.casilla?.match(/^\d+/)?.[0] || '—'}</span></td>
                                 <td><span className="text-danger-600 font-medium">{c.casilla}</span></td>
                                 <td><span className="text-surface-400 text-xs">{municipios.find(m => m.id === c.municipio)?.municipio}</span></td>
                               </tr>
@@ -1175,7 +1224,9 @@ export default function App() {
                       {representantesGenerales
                         .filter(rg => 
                           rg.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          rg.apellido_paterno.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (rg.telefono && rg.telefono.includes(searchTerm)) ||
+                          (rg.clave_elector && rg.clave_elector.includes(searchTerm.toUpperCase())) ||
                           (rg.correo_electronico && rg.correo_electronico.toLowerCase().includes(searchTerm.toLowerCase()))
                         )
                         .sort((a, b) => a.nombre.localeCompare(b.nombre))
@@ -1503,11 +1554,12 @@ export default function App() {
                       <div>
                          <label className="input-label">Casilla Asignada</label>
                          <select required className="select-field" value={rcForm.casilla_id} onChange={e => {
-                           const cas = casillas.find(c => String(c.casilla_id) === e.target.value);
+                           const selectedId = e.target.value;
+                           const cas = casillas.find(c => String(c.casilla_id) === String(selectedId));
                            setRcForm({
                              ...rcForm, 
-                             casilla_id: e.target.value,
-                             seccion_id: cas?.casilla ? cas.casilla.split(' ')[0] : '',
+                             casilla_id: selectedId,
+                             seccion_id: cas?.casilla ? (cas.casilla.match(/^\d+/)?.[0] || '') : '',
                              df_id: cas?.df ? String(cas.df) : rcForm.df_id,
                              dl_id: cas?.dl ? String(cas.dl) : rcForm.dl_id
                            });
@@ -1766,7 +1818,6 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>ID</th>
                         <th>Casilla</th>
                         <th>Municipio</th>
                         <th>Distrito Federal</th>
@@ -1777,14 +1828,20 @@ export default function App() {
                     </thead>
                     <tbody>
                       {casillas
-                        .filter(c => 
-                          String(c.casilla_id).includes(searchTerm) || 
-                          (c.casilla && c.casilla.toLowerCase().includes(searchTerm.toLowerCase()))
-                        )
+                        .filter(c => {
+                          const search = searchTerm.toLowerCase().trim();
+                          if (!search) return true;
+                          
+                          const cname = (c.casilla || '').toLowerCase();
+                          const cubi = (c.ubicación || '').toLowerCase();
+                          
+                          // Busqueda inteligente: todas las palabras buscadas deben estar presentes
+                          const terms = search.split(/\s+/);
+                          return terms.every(t => cname.includes(t) || cubi.includes(t));
+                        })
                         .sort((a, b) => (a.casilla_id || 0) - (b.casilla_id || 0))
                         .map((cas) => (
                           <tr key={cas.casilla_id}>
-                            <td><span className="font-semibold text-surface-800">{cas.casilla_id}</span></td>
                             <td><span className="font-semibold text-inst-600 uppercase">{cas.casilla}</span></td>
                             <td><span className="text-sm text-surface-600">{municipios.find(m => String(m.id) === String(cas.municipio))?.municipio || 'N/A'}</span></td>
                             <td><span className="text-sm text-surface-600">{cas.df ? `DF ${cas.df}` : 'N/A'}</span></td>
@@ -2004,7 +2061,7 @@ export default function App() {
                           <input 
                             type="text" 
                             required 
-                            className="input-field lowecase" 
+                            className="input-field lowercase" 
                             placeholder="ej. fcorascon"
                             value={userForm.usuario} 
                             onChange={e => setUserForm({...userForm, usuario: e.target.value.toLowerCase().replace(/\s/g, '')})} 
