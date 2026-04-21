@@ -13,7 +13,6 @@ import {
   BarChart2,
   Settings,
   Bell,
-  CheckCircle,
   AlertTriangle,
   LogIn,
   Shield,
@@ -59,7 +58,6 @@ type Ruta = Tables<'rutas'>;
 type UsuarioManual = Tables<'usuarios'>;
 
 // --- Constantes y Validaciones ---
-const CLAVE_ELECTOR_REGEX = /^[A-Z]{6}\d{8}[HM]\d{3}$/;
 
 // --- Interfaces de Formulario ---
 interface RGFormData {
@@ -1219,7 +1217,6 @@ export default function App() {
                   setMensajeValidacion={setMensajeValidacion}
                   credencialEncontrada={credencialEncontrada}
                   setCredencialEncontrada={setCredencialEncontrada}
-                  activeTab={activeTab}
                   representantesGenerales={representantesGenerales}
                   representantesCasilla={representantesCasilla}
                   editingRgId={editingRgId}
@@ -1388,7 +1385,6 @@ export default function App() {
 
                 <ValidadorCredencial 
                   tipo="rc"
-                  registrosExistentes={representantesCasilla}
                   onSuccess={(clave: string) => {
                     setRcForm(prev => ({ ...prev, clave_elector: clave }));
                     setRcValidado(true);
@@ -1399,15 +1395,10 @@ export default function App() {
                   setMensajeValidacion={setMensajeValidacion}
                   credencialEncontrada={credencialEncontrada}
                   setCredencialEncontrada={setCredencialEncontrada}
-                  activeTab={activeTab}
                   representantesGenerales={representantesGenerales}
                   representantesCasilla={representantesCasilla}
                   editingRgId={editingRgId}
                   editingRcId={editingRcId}
-                  setRgForm={setRgForm}
-                  setRcForm={setRcForm}
-                  handleEditRg={handleEditRg}
-                  handleEditRc={handleEditRc}
                 />
 
                 {(rcValidado || editingRcId) && (
