@@ -1869,9 +1869,18 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-end">
                       <label className="input-label">Seleccionar Casillas ({casillas.filter(c => {
-                        if (rutaForm.municipio_id && String(c.municipio) !== rutaForm.municipio_id) return false;
-                        if (rutaForm.df_id && String(c.df) !== rutaForm.df_id) return false;
-                        if (rutaForm.dl_id && String(c.dl) !== rutaForm.dl_id) return false;
+                        if (rutaForm.municipio_id && String(c.municipio) !== String(rutaForm.municipio_id)) return false;
+                        
+                        if (rutaForm.df_id) {
+                          const selectedDf = distritosFederales.find(d => String(d.id) === String(rutaForm.df_id));
+                          if (selectedDf && c.df !== selectedDf.df) return false;
+                        }
+                        
+                        if (rutaForm.dl_id) {
+                          const selectedDl = distritosLocales.find(d => String(d.id) === String(rutaForm.dl_id));
+                          if (selectedDl && c.dl !== selectedDl.dl) return false;
+                        }
+                        
                         return true;
                       }).length} disponibles)</label>
                       <span className="text-xs font-semibold text-inst-600 bg-inst-50 px-2 py-1 rounded">
@@ -1897,9 +1906,17 @@ export default function App() {
                       <div className="max-h-60 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-2">
                         {casillas
                           .filter(c => {
-                            if (rutaForm.municipio_id && String(c.municipio) !== rutaForm.municipio_id) return false;
-                            if (rutaForm.df_id && String(c.df) !== rutaForm.df_id) return false;
-                            if (rutaForm.dl_id && String(c.dl) !== rutaForm.dl_id) return false;
+                            if (rutaForm.municipio_id && String(c.municipio) !== String(rutaForm.municipio_id)) return false;
+                            
+                            if (rutaForm.df_id) {
+                              const selectedDf = distritosFederales.find(d => String(d.id) === String(rutaForm.df_id));
+                              if (selectedDf && c.df !== selectedDf.df) return false;
+                            }
+                            
+                            if (rutaForm.dl_id) {
+                              const selectedDl = distritosLocales.find(d => String(d.id) === String(rutaForm.dl_id));
+                              if (selectedDl && c.dl !== selectedDl.dl) return false;
+                            }
                             
                             if (casillaSearch.trim()) {
                               const search = casillaSearch.toLowerCase();
