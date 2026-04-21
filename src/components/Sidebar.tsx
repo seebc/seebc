@@ -119,23 +119,27 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-surface-900 text-white z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
+      <aside className={`fixed inset-y-0 left-0 bg-surface-900 text-white z-50 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${isOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full lg:translate-x-0'}`}>
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Logo */}
           <div className="p-6 border-b border-surface-800">
-            <div className="flex items-center justify-between lg:justify-center gap-3">
+            <div className={`flex items-center ${isOpen ? 'justify-between' : 'justify-center'} gap-3`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-inst-500 to-inst-700 rounded-xl flex items-center justify-center shadow-lg shadow-inst-500/20">
+                <div className="w-10 h-10 bg-gradient-to-br from-inst-500 to-inst-700 rounded-xl flex items-center justify-center shadow-lg shadow-inst-500/20 shrink-0">
                   <span className="text-xl font-black text-white italic">S</span>
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-white">SEEBC</h1>
-                  <p className="text-[10px] font-bold text-inst-400 uppercase tracking-widest leading-none">Plataforma 2027</p>
-                </div>
+                {isOpen && (
+                  <div className="animate-fade-in whitespace-nowrap">
+                    <h1 className="text-xl font-bold tracking-tight text-white">SEEBC</h1>
+                    <p className="text-[10px] font-bold text-inst-400 uppercase tracking-widest leading-none">Plataforma 2027</p>
+                  </div>
+                )}
               </div>
-              <button onClick={onClose} className="lg:hidden p-2 text-surface-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
+              {isOpen && (
+                <button onClick={onClose} className="lg:hidden p-2 text-surface-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -143,20 +147,21 @@ const Sidebar: React.FC<SidebarProps> = ({
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
             {navigationItems.map((item) => {
               if (item.isGroup) {
-                const isOpen = openGroups[item.id];
+                const isGroupOpen = openGroups[item.id];
                 return (
                   <div key={item.id} className="space-y-1">
                     <button
                       onClick={() => toggleGroup(item.id)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-surface-400 uppercase tracking-wider hover:text-white transition-colors group"
+                      className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center py-3'} py-2 text-xs font-bold text-surface-400 uppercase tracking-wider hover:text-white transition-colors group`}
+                      title={!isOpen ? item.label : ''}
                     >
                       <div className="flex items-center gap-3">
                         <item.Icon className="w-4 h-4 text-surface-500 group-hover:text-inst-400 transition-colors" />
-                        <span>{item.label}</span>
+                        {isOpen && <span className="animate-fade-in">{item.label}</span>}
                       </div>
-                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                      {isOpen && <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGroupOpen ? 'rotate-180' : ''}`} />}
                     </button>
-                    {isOpen && (
+                    {isOpen && isGroupOpen && (
                       <div className="space-y-1 pl-4 border-l border-surface-800 ml-5 mt-1">
                         {item.subItems?.map((sub) => (
                           <button
@@ -172,7 +177,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             }`}
                           >
                             <sub.Icon className={`w-4 h-4 ${activeTab === sub.id ? 'text-white' : 'text-surface-500'}`} />
-                            {sub.label}
+                            <span>{sub.label}</span>
                           </button>
                         ))}
                       </div>
@@ -188,14 +193,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     handleTabClick(item.id);
                     onClose();
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                  className={`w-full flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center'} py-2 rounded-lg text-sm transition-all ${
                     activeTab === item.id 
                       ? 'bg-inst-600 text-white shadow-lg shadow-inst-600/20 font-medium' 
                       : 'text-surface-400 hover:bg-surface-800 hover:text-white'
                   }`}
+                  title={!isOpen ? item.label : ''}
                 >
                   <item.Icon className={`w-4 h-4 ${activeTab === item.id ? 'text-white' : 'text-surface-500'}`} />
-                  {item.label}
+                  {isOpen && <span className="animate-fade-in">{item.label}</span>}
                 </button>
               );
             })}
@@ -205,10 +211,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-4 border-t border-surface-800 bg-surface-900/50">
             <button 
               onClick={onLogout}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-danger-500/10 hover:bg-danger-500 text-danger-500 hover:text-white rounded-xl transition-all group font-semibold text-sm"
+              className={`w-full flex items-center ${isOpen ? 'justify-center gap-3 px-4' : 'justify-center'} py-3 bg-danger-500/10 hover:bg-danger-500 text-danger-500 hover:text-white rounded-xl transition-all group font-semibold text-sm`}
+              title={!isOpen ? 'Cerrar Sesión' : ''}
             >
               <LogOut className="w-4 h-4" />
-              <span>Cerrar Sesión</span>
+              {isOpen && <span>Cerrar Sesión</span>}
             </button>
           </div>
         </div>
