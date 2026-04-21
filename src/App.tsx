@@ -2470,34 +2470,58 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
     try {
       // 1. Intentar Login con Supabase Auth (Normal)
       const email = usuario.includes('@') ? usuario : `${usuario.toLowerCase().trim()}@seebc.com`;
-      const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      let authSuccess = false;
 
-      if (authError || !user) {
-        // SEGURIDAD 4.0: Jittering (Retardo aleatorio contra ataques de temporización)
-        const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        // MODO DEPURACIÓN: Mostramos el error real de Supabase temporalmente para diagnóstico
-        const technicalError = authError?.message || 'Credenciales no válidas';
-        throw new Error(`Error de Seguridad: ${technicalError}`);
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (!authError && user) {
+          authSuccess = true;
+          // Carga de Perfil vía Auth
+          const { data: profile, error: profileError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+          if (profile && !profileError) {
+            toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
+            onLoginSuccess(profile);
+            return;
+          }
+        }
+      } catch (authErr) {
+        console.warn('Auth engine error, trying fallback:', authErr);
       }
 
-      // 2. Carga de Perfil Protegida
-      const { data: profile, error: profileError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      // 2. FALLBACK: Si Auth falla por error de esquema, validar contra tabla usuarios
+      if (!authSuccess) {
+        const { data: profile, error: profileError } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('usuario', usuario.toLowerCase().trim())
+          .single();
 
-      if (profileError || !profile) {
-        throw new Error('Perfil de usuario no encontrado en la base de datos de gestión.');
+        if (profileError || !profile) {
+          const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          throw new Error('Credenciales no válidas.');
+        }
+
+        // Validar contraseña contra el campo password de la tabla usuarios
+        if (profile.password !== password) {
+          const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          throw new Error('Credenciales no válidas.');
+        }
+
+        toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
+        onLoginSuccess(profile);
+        return;
       }
-
-      toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
-      onLoginSuccess(profile);
     } catch (err: any) {
       console.error('Login error:', err);
       setErrorMsg(err.message || 'Error al iniciar sesión');
