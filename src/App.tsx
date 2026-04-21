@@ -719,8 +719,9 @@ export default function App() {
   };
 
   // --- Cálculos de métricas ---
-  const casillasConRepresentante = new Set(representantesCasilla.map(rc => String(rc.casilla_id)));
-  const casillasSinCobertura = casillas.length - casillasConRepresentante.size;
+  const idsCasillasConRepresentante = new Set(representantesCasilla.map(rc => rc.casilla_id));
+  const casillasCubiertas = casillas.filter(c => idsCasillasConRepresentante.has(c.casilla_id)).length;
+  const casillasSinCobertura = casillas.length - casillasCubiertas;
   const rcGoal = casillas.length;
   const rgGoal = Math.ceil(secciones.length / 10) || 0;
 
