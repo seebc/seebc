@@ -2480,39 +2480,30 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
 
         if (!authError && user) {
           authSuccess = true;
-          // Carga de Perfil vía Auth
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile } = await supabase
             .from('usuarios')
             .select('*')
             .eq('user_id', user.id)
             .single();
 
-          if (profile && !profileError) {
+          if (profile) {
             toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
             onLoginSuccess(profile);
             return;
           }
         }
       } catch (authErr) {
-        console.warn('Auth engine error, trying fallback:', authErr);
+        console.warn('Auth engine unavailable, using secure fallback:', authErr);
       }
 
-      // 2. FALLBACK: Si Auth falla por error de esquema, validar contra tabla usuarios
+      // 2. FALLBACK SEGURO: Validación bcrypt via RPC en el servidor
       if (!authSuccess) {
-        const { data: profile, error: profileError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('usuario', usuario.toLowerCase().trim())
-          .single();
+        const { data: profile, error: rpcError } = await supabase.rpc('validate_login', {
+          p_usuario: usuario.toLowerCase().trim(),
+          p_contrasena: password
+        });
 
-        if (profileError || !profile) {
-          const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          throw new Error('Credenciales no válidas.');
-        }
-
-        // Validar contraseña contra el campo password de la tabla usuarios
-        if (profile.password !== password) {
+        if (rpcError || !profile) {
           const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
           await new Promise(resolve => setTimeout(resolve, delay));
           throw new Error('Credenciales no válidas.');
