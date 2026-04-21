@@ -263,7 +263,7 @@ export default function App() {
         supabase.from('rg').select('*').order('nombre', { ascending: true }),
         supabase.from('rc').select('*').order('nombre', { ascending: true }),
         supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }),
-        supabase.from('casillas').select('*').order('seccion_id', { ascending: true })
+        supabase.from('casillas').select('*').order('casilla', { ascending: true })
       ]);
 
       if (rgRes.data) setRepresentantesGenerales(rgRes.data);
@@ -1507,7 +1507,7 @@ export default function App() {
                            setRcForm({
                              ...rcForm, 
                              casilla_id: e.target.value,
-                             seccion_id: cas?.seccion_id ? String(cas.seccion_id) : '',
+                             seccion_id: cas?.casilla ? cas.casilla.split(' ')[0] : '',
                              df_id: cas?.df ? String(cas.df) : rcForm.df_id,
                              dl_id: cas?.dl ? String(cas.dl) : rcForm.dl_id
                            });
