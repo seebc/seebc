@@ -253,10 +253,10 @@ export default function App() {
 
       // 3. Cargar Datos Operativos (RLS filtrará automáticamente si no es ADMIN)
       const [rgRes, rcRes, rutasRes, casRes] = await Promise.all([
-        supabase.from('rg').select('*').order('nombre', { ascending: true }).limit(5000),
-        supabase.from('rc').select('*').order('nombre', { ascending: true }).limit(5000),
-        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }).limit(5000),
-        supabase.from('casillas').select('*').order('casilla', { ascending: true }).limit(5000)
+        supabase.from('rg').select('*').order('nombre', { ascending: true }).limit(6000),
+        supabase.from('rc').select('*').order('nombre', { ascending: true }).limit(6000),
+        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }).limit(6000),
+        supabase.from('casillas').select('*').order('casilla', { ascending: true }).limit(6000)
       ]);
 
       if (rgRes.data) setRepresentantesGenerales(rgRes.data);
