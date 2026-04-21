@@ -3,35 +3,18 @@ import { supabase } from './supabaseClient';
 import { 
   Edit2, 
   Trash2, 
-  LayoutDashboard,
   Users,
   UserCircle,
   ClipboardList,
   Route,
   Search,
-  Vote,
   BarChart2,
-  Settings,
-  Bell,
   AlertTriangle,
   LogIn,
   Shield,
   Eye,
   EyeOff,
-  MoreVertical,
-  ChevronDown,
-  MapPin,
-  TrendingUp,
-  FileText,
-  UserPlus,
-  X,
-  Menu,
-  ChevronRight,
-  Clock,
-  LogOut,
-  Download,
-  Plus,
-  Key
+  Printer
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Tables } from './database.types';
@@ -736,7 +719,6 @@ export default function App() {
   };
 
   // --- Cálculos de métricas ---
-  const coberturaEstatal = Math.min(100, Math.round((Array.from(new Set(representantesCasilla.map(rc => rc.casilla_id))).length / (casillas.length || 1)) * 100));
   const casillasConRepresentante = new Set(representantesCasilla.map(rc => String(rc.casilla_id)));
   const casillasSinCobertura = casillas.length - casillasConRepresentante.size;
 
