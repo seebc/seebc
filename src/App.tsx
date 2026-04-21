@@ -364,11 +364,11 @@ export default function App() {
       };
 
       if (editingRgId) {
-        const { error } = await supabase.from('rg').update(dataToSave).eq('id', editingRgId);
+        const { error } = await supabase.rpc('save_rg_secure', { p_id: editingRgId, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante General actualizado');
       } else {
-        const { error } = await supabase.from('rg').insert([dataToSave]);
+        const { error } = await supabase.rpc('save_rg_secure', { p_id: null, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante General registrado');
       }
@@ -439,11 +439,11 @@ export default function App() {
       };
 
       if (editingRcId) {
-        const { error } = await supabase.from('rc').update(dataToSave).eq('id', editingRcId);
+        const { error } = await supabase.rpc('save_rc_secure', { p_id: editingRcId, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante de Casilla actualizado');
       } else {
-        const { error } = await supabase.from('rc').insert([dataToSave]);
+        const { error } = await supabase.rpc('save_rc_secure', { p_id: null, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante de Casilla registrado');
       }
@@ -503,11 +503,11 @@ export default function App() {
       };
 
       if (editingRutaId) {
-        const { error } = await supabase.from('rutas').update(dataToSave).eq('id', editingRutaId);
+        const { error } = await supabase.rpc('save_ruta_secure', { p_id: editingRutaId, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Ruta actualizada');
       } else {
-        const { error } = await supabase.from('rutas').insert([dataToSave]);
+        const { error } = await supabase.rpc('save_ruta_secure', { p_id: null, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Ruta registrada');
       }
@@ -563,11 +563,11 @@ export default function App() {
       };
 
       if (editingCasillaIntId !== null) {
-        const { error } = await supabase.from('casillas').update(dataToSave).eq('casilla_id', editingCasillaIntId);
+        const { error } = await supabase.rpc('save_casilla_secure', { p_id: editingCasillaIntId, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Casilla actualizada');
       } else {
-        const { error } = await supabase.from('casillas').insert([dataToSave]);
+        const { error } = await supabase.rpc('save_casilla_secure', { p_id: null, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Casilla registrada');
       }
