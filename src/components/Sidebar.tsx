@@ -34,10 +34,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose 
 }) => {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    group_generales: true,
-    group_casillas: true,
-    group_rutas: true,
-    group_casillas_cat: true
+    group_generales: false,
+    group_casillas: false,
+    group_rutas: false,
+    group_casillas_cat: false
   });
 
   const toggleGroup = (groupId: string) => {
@@ -119,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-surface-900 text-white z-50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-surface-900 text-white z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-surface-800">
