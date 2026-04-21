@@ -19,6 +19,7 @@ export interface Database {
           municipio: number | null
           seccion_id: number | null
           ubicación: string | null
+          capturista_id: number | null
         }
         Insert: {
           casilla?: string | null
@@ -29,6 +30,7 @@ export interface Database {
           municipio?: number | null
           seccion_id?: number | null
           ubicación?: string | null
+          capturista_id?: number | null
         }
         Update: {
           casilla?: string | null
@@ -39,6 +41,7 @@ export interface Database {
           municipio?: number | null
           seccion_id?: number | null
           ubicación?: string | null
+          capturista_id?: number | null
         }
         Relationships: []
       }
@@ -113,6 +116,7 @@ export interface Database {
           telefono: string | null
           tipo_nombramiento: Database["public"]["Enums"]["tipo_nombramiento"]
           tipo_propaganda: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id: number | null
         }
         Insert: {
           apellido_materno?: string | null
@@ -126,6 +130,7 @@ export interface Database {
           colonia?: string | null
           correo_electronico?: string | null
           credencial_vigente?: boolean
+          user_id?: string | null
           df_id: number
           dl_id: number
           es_militante?: boolean
@@ -139,6 +144,7 @@ export interface Database {
           telefono?: string | null
           tipo_nombramiento: Database["public"]["Enums"]["tipo_nombramiento"]
           tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id?: number | null
         }
         Update: {
           apellido_materno?: string | null
@@ -165,6 +171,7 @@ export interface Database {
           telefono?: string | null
           tipo_nombramiento?: Database["public"]["Enums"]["tipo_nombramiento"]
           tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id?: number | null
         }
         Relationships: []
       }
@@ -192,6 +199,7 @@ export interface Database {
           seccion_id: number
           telefono: string | null
           tipo_propaganda: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id: number | null
         }
         Insert: {
           apellido_materno?: string | null
@@ -216,6 +224,7 @@ export interface Database {
           seccion_id: number
           telefono?: string | null
           tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id?: number | null
         }
         Update: {
           apellido_materno?: string | null
@@ -240,6 +249,7 @@ export interface Database {
           seccion_id?: number
           telefono?: string | null
           tipo_propaganda?: Database["public"]["Enums"]["tipo_propaganda"] | null
+          capturista_id?: number | null
         }
         Relationships: []
       }
@@ -252,6 +262,7 @@ export interface Database {
           representante_general_id: number | null
           casillas_asignada: Json
           municipio_id: number | null
+          capturista_id: number | null
         }
         Insert: {
           df_id?: number | null
@@ -261,6 +272,7 @@ export interface Database {
           representante_general_id?: number | null
           casillas_asignada: Json
           municipio_id?: number | null
+          capturista_id?: number | null
         }
         Update: {
           df_id?: number | null
@@ -270,6 +282,7 @@ export interface Database {
           representante_general_id?: number | null
           casillas_asignada?: Json
           municipio_id?: number | null
+          capturista_id?: number | null
         }
         Relationships: []
       }

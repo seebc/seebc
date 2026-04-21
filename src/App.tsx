@@ -23,7 +23,6 @@ import {
   LogIn,
   Route,
   Vote,
-  FileCheck,
   Bell,
   TrendingUp,
   Menu,
@@ -123,10 +122,11 @@ export default function App() {
   const [representantesGenerales, setRepresentantesGenerales] = useState<RepresentanteGeneral[]>([]);
   const [representantesCasilla, setRepresentantesCasilla] = useState<RepresentanteCasilla[]>([]);
   const [rutas, setRutas] = useState<Ruta[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioManual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // --- UI y Navegación ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_cobertura' | 'reporte_rutas'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_rutas' | 'usuarios_mgmt'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -175,6 +175,15 @@ export default function App() {
 
   const [casillaSearch, setCasillaSearch] = useState('');
 
+  const [userForm, setUserForm] = useState({
+    usuario: '',
+    nombre_completo: '',
+    password: '',
+    rol: 'CAPTURISTA' as 'ADMIN' | 'CAPTURISTA'
+  });
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [showUserPassword, setShowUserPassword] = useState(false);
+
   // --- Edición ---
   const [editingRgId, setEditingRgId] = useState<number | null>(null);
   const [editingRcId, setEditingRcId] = useState<number | null>(null);
@@ -185,61 +194,88 @@ export default function App() {
 
   // --- Lógica de Auth ---
   useEffect(() => {
-    const session = localStorage.getItem('seebc_user');
-    if (session) {
-      setCurrentUser(JSON.parse(session));
-    }
-    setAuthChecking(false);
+    // 1. Escuchar cambios en la sesión de Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // Al obtener sesión, buscamos el perfil extendido (rol, etc) en public.usuarios
+        const { data: profile } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (profile) {
+          const userWithProfile = { ...profile };
+          setCurrentUser(userWithProfile);
+          localStorage.setItem('seebc_user', JSON.stringify(userWithProfile));
+        }
+      } else {
+        setCurrentUser(null);
+        localStorage.removeItem('seebc_user');
+      }
+      setAuthChecking(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLoginSuccess = (user: UsuarioManual) => {
-    setCurrentUser(user);
-    localStorage.setItem('seebc_user', JSON.stringify(user));
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     localStorage.removeItem('seebc_user');
+    setActiveTab('dashboard');
     toast.success('Sesión cerrada');
+  };
+
+  const handleLoginSuccess = (user: any) => {
+    // La sesión la maneja ahora onAuthStateChange de forma centralizada
+    setCurrentUser(user);
+    toast.success('Bienvenido, ' + (user.nombre_completo || user.usuario));
   };
 
   useSessionTimeout(handleLogout, !!currentUser);
 
   // --- Carga de Datos ---
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     if (!currentUser) return;
     setIsLoading(true);
+
     try {
-      const [
-        { data: munData }, { data: secData }, { data: dfData }, 
-        { data: dlData }, { data: casData }, { data: rgData }, 
-        { data: rcData }, { data: rutaData }
-      ] = await Promise.all([
-        supabase.from('municipios').select('*'),
-        supabase.from('secciones').select('*'),
+      // 1. Cargar Usuarios (Solo si es ADMIN la política lo permitirá)
+      const { data: usersData } = await supabase.from('usuarios').select('*');
+      if (usersData) setUsuarios(usersData);
+
+      // 2. Cargar Catálogos (Públicos o Autenticados)
+      const [dfRes, dlRes, munRes, secRes] = await Promise.all([
         supabase.from('df').select('*'),
         supabase.from('dl').select('*'),
-        supabase.from('casillas').select('*'),
-        supabase.from('rg').select('*'),
-        supabase.from('rc').select('*'),
-        supabase.from('rutas').select('*')
+        supabase.from('municipios').select('*'),
+        supabase.from('secciones').select('*')
       ]);
 
-      if (munData) setMunicipios(munData);
-      if (secData) setSecciones(secData);
-      if (dfData) setDistritosFederales(dfData);
-      if (dlData) setDistritosLocales(dlData);
-      if (casData) setCasillas(casData);
-      if (rgData) setRepresentantesGenerales(rgData);
-      if (rcData) setRepresentantesCasilla(rcData);
-      if (rutaData) setRutas(rutaData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Error al cargar datos del sistema');
+      if (dfRes.data) setDistritosFederales(dfRes.data);
+      if (dlRes.data) setDistritosLocales(dlRes.data);
+      if (munRes.data) setMunicipios(munRes.data);
+      if (secRes.data) setSecciones(secRes.data);
+
+      // 3. Cargar Datos Operativos (RLS filtrará automáticamente si no es ADMIN)
+      const [rgRes, rcRes, rutasRes, casRes] = await Promise.all([
+        supabase.from('rg').select('*').order('nombre', { ascending: true }),
+        supabase.from('rc').select('*').order('nombre', { ascending: true }),
+        supabase.from('rutas').select('*').order('nombre_ruta', { ascending: true }),
+        supabase.from('casillas').select('*').order('seccion_id', { ascending: true })
+      ]);
+
+      if (rgRes.data) setRepresentantesGenerales(rgRes.data);
+      if (rcRes.data) setRepresentantesCasilla(rcRes.data);
+      if (rutasRes.data) setRutas(rutasRes.data);
+      if (casRes.data) setCasillas(casRes.data);
+    } catch (error: any) {
+      console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  };
 
   const handleTabClick = useCallback((itemId: string) => {
     setActiveTab(itemId as any);
@@ -280,16 +316,30 @@ export default function App() {
           municipio_id: ''
         });
       }
+    } else if (itemId === 'usuarios_mgmt') {
+      setEditingUserId(null);
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA' });
+      setShowUserPassword(false);
     }
   }, [editingRutaId]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [currentUser]);
+
+  // --- Seguridad 4.0: Ofuscación y Anti-Reconocimiento ---
+  const handleSecurityError = (err: any, customMsg: string) => {
+    // Log interno para depuración del desarrollador (oculto para el usuario final en prod)
+    console.warn(`[Security Alert] Access event recorded: ${Date.now()}`);
+    // No revelamos la estructura ni el origen del error
+    toast.error('Acceso restringido: Violación de protocolo de seguridad o sesión expirada.');
+  };
 
   // --- Handlers: Representantes Generales ---
   const handleSaveRg = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = currentUser;
+    if (!user) return;
     if (!rgForm.clave_elector || rgForm.clave_elector.length !== 18) {
       toast.error('Debes validar una clave de elector de 18 caracteres');
       return;
@@ -297,11 +347,20 @@ export default function App() {
 
     try {
       const { municipio_id, ...payload } = rgForm;
+      
+      // NORMALIZACIÓN 3.0: Limpieza profunda de datos
+      const sanitizedKey = payload.clave_elector.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+      const sanitizedPhone = payload.telefono ? payload.telefono.replace(/\D/g, '').slice(0,10) : null;
+
       const dataToSave = {
         ...payload,
+        clave_elector: sanitizedKey,
+        telefono: sanitizedPhone,
+        correo_electronico: payload.correo_electronico?.toLowerCase().trim() || null,
         df_id: parseInt(payload.df_id),
         dl_id: parseInt(payload.dl_id),
-        seccion_id: parseInt(payload.seccion_id)
+        seccion_id: parseInt(payload.seccion_id),
+        capturista_id: user.id // Forzado
       };
 
       if (editingRgId) {
@@ -319,7 +378,7 @@ export default function App() {
       fetchData();
       setActiveTab('listado_rg');
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar');
+      handleSecurityError(error, 'Error al guardar RG');
     }
   };
 
@@ -353,6 +412,8 @@ export default function App() {
   // --- Handlers: Representantes de Casilla ---
   const handleSaveRc = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = currentUser;
+    if (!user) return;
     if (!rcForm.clave_elector || rcForm.clave_elector.length !== 18) {
       toast.error('Debes validar una clave de elector de 18 caracteres');
       return;
@@ -360,12 +421,21 @@ export default function App() {
 
     try {
       const { municipio_id, ...payload } = rcForm;
+
+      // NORMALIZACIÓN 3.0: Limpieza profunda de datos
+      const sanitizedKey = payload.clave_elector.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+      const sanitizedPhone = payload.telefono ? payload.telefono.replace(/\D/g, '').slice(0,10) : null;
+
       const dataToSave = {
         ...payload,
+        clave_elector: sanitizedKey,
+        telefono: sanitizedPhone,
+        correo_electronico: payload.correo_electronico?.toLowerCase().trim() || null,
         casilla_id: payload.casilla_id ? parseInt(payload.casilla_id) : null,
         df_id: parseInt(payload.df_id),
         dl_id: parseInt(payload.dl_id),
-        seccion_id: parseInt(payload.seccion_id)
+        seccion_id: parseInt(payload.seccion_id),
+        capturista_id: user.id // Forzado
       };
 
       if (editingRcId) {
@@ -383,7 +453,7 @@ export default function App() {
       fetchData();
       setActiveTab('listado_rc');
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar');
+      handleSecurityError(error, 'Error al guardar RC');
     }
   };
 
@@ -419,6 +489,8 @@ export default function App() {
   // --- Handlers: Rutas ---
   const handleSaveRuta = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = currentUser;
+    if (!user) return;
     try {
       const dataToSave = {
         nombre_ruta: rutaForm.nombre_ruta,
@@ -426,7 +498,8 @@ export default function App() {
         dl_id: parseInt(rutaForm.dl_id),
         representante_general_id: rutaForm.representante_general_id ? parseInt(rutaForm.representante_general_id) : null,
         municipio_id: rutaForm.municipio_id ? parseInt(rutaForm.municipio_id) : null,
-        casillas_asignada: rutaForm.casillas_asignada as any
+        casillas_asignada: rutaForm.casillas_asignada as any,
+        capturista_id: user.id // Forzado
       };
 
       if (editingRutaId) {
@@ -450,7 +523,7 @@ export default function App() {
       fetchData();
       setActiveTab('rutas_list');
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar ruta');
+      handleSecurityError(error, 'Error al guardar ruta');
     }
   };
 
@@ -477,6 +550,8 @@ export default function App() {
   // --- Handlers: Casillas ---
   const handleSaveCasilla = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = currentUser;
+    if (!user) return;
     try {
       const dataToSave: any = {
         casilla: casillaMgmtForm.casilla,
@@ -484,10 +559,10 @@ export default function App() {
         dl: casillaMgmtForm.dl_id ? parseInt(casillaMgmtForm.dl_id) : null,
         municipio: casillaMgmtForm.municipio_id ? parseInt(casillaMgmtForm.municipio_id) : null,
         ubicación: casillaMgmtForm.ubicación ? casillaMgmtForm.ubicación.toUpperCase() : null,
+        capturista_id: user.id // Forzado
       };
 
       if (editingCasillaIntId !== null) {
-        // En supabase if primary key is changed, it might be tricky. Assuming casilla_id can be updated, let's use the editing tracking ID as filter.
         const { error } = await supabase.from('casillas').update(dataToSave).eq('casilla_id', editingCasillaIntId);
         if (error) throw error;
         toast.success('Casilla actualizada');
@@ -509,7 +584,7 @@ export default function App() {
       fetchData();
       setActiveTab('casillas_list');
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar casilla');
+      handleSecurityError(error, 'Error al guardar casilla');
     }
   };
 
@@ -533,6 +608,75 @@ export default function App() {
     else { toast.success('Casilla eliminada'); fetchData(); }
   };
 
+  // --- Handlers: Usuarios ---
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userForm.usuario || (!editingUserId && !userForm.password)) {
+      toast.error('Nombre de usuario y contraseña son requeridos');
+      return;
+    }
+
+    try {
+      if (editingUserId) {
+        // Actualización básica de perfil
+        const { error } = await supabase
+          .from('usuarios')
+          .update({
+            usuario: userForm.usuario.toLowerCase().trim(),
+            rol: userForm.rol,
+            nombre_completo: userForm.nombre_completo || null
+          })
+          .eq('id', editingUserId);
+        if (error) throw error;
+      } else {
+        // Creación avanzada (Auth + Perfil) vía RPC de seguridad
+        const dummyEmail = `${userForm.usuario.toLowerCase().trim()}@seebc.com`;
+        const { data, error } = await (supabase as any).rpc('create_new_auth_user', {
+          p_email: dummyEmail,
+          p_password: userForm.password,
+          p_username: userForm.usuario.toLowerCase().trim(),
+          p_nombre: userForm.nombre_completo || '',
+          p_rol: userForm.rol
+        });
+
+        if (error) throw error;
+        if (data && !data.success) throw new Error(data.error);
+      }
+
+      toast.success(editingUserId ? 'Usuario actualizado' : 'Usuario creado');
+      setEditingUserId(null);
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA' });
+      fetchData();
+    } catch (error: any) {
+      handleSecurityError(error, 'Error al gestionar usuarios');
+    }
+  };
+
+  const handleEditUser = (u: UsuarioManual) => {
+    setEditingUserId(u.id);
+    setUserForm({
+      usuario: u.usuario,
+      nombre_completo: u.nombre_completo || '',
+      password: '', // No mostramos el hash
+      rol: (u.rol as any) || 'CAPTURISTA'
+    });
+    setShowUserPassword(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (id === currentUser?.id) {
+      toast.error('No puedes eliminar tu propio usuario');
+      return;
+    }
+    if (!confirm('¿Seguro que deseas eliminar este usuario? Sus capturas quedarán sin autor asignado.')) return;
+    
+    // El trigger/constraint de base de datos se encargará de poner capturista_id = NULL
+    const { error } = await supabase.from('usuarios').delete().eq('id', id);
+    if (error) toast.error('Error al eliminar usuario');
+    else { toast.success('Usuario eliminado'); fetchData(); }
+  };
+
   // --- Cálculos de métricas ---
   const coberturaEstatal = Math.round((representantesCasilla.length / (casillas.length || 1)) * 100);
   const casillasSinCobertura = casillas.length - Array.from(new Set(representantesCasilla.map(rc => rc.casilla_id))).length;
@@ -551,8 +695,8 @@ export default function App() {
     padron: 'Padrón Electoral',
     rutas_form: editingRutaId ? 'Editar Ruta' : 'Nueva Ruta',
     rutas_list: 'Listado de Rutas',
-    reporte_cobertura: 'Reporte de Cobertura',
     reporte_rutas: 'Listados Operativos',
+    usuarios_mgmt: 'Gestión de Usuarios',
   };
 
   return (
@@ -644,7 +788,7 @@ export default function App() {
             </div>
             <div className="hidden lg:block">
               <p className="text-sm font-semibold text-surface-800 leading-none">{currentUser?.usuario || 'Invitado'}</p>
-              <p className="text-[11px] text-surface-400 mt-0.5">Administrador</p>
+              <p className="text-[11px] text-surface-400 mt-0.5">{currentUser?.rol === 'ADMIN' ? 'Administrador' : 'Capturista'}</p>
             </div>
           </div>
         </div>
@@ -1833,6 +1977,163 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {/* ============ USUARIOS MGMT ============ */}
+            {activeTab === 'usuarios_mgmt' && (
+              <div className="space-y-8 animate-fade-in-up">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-surface-900">Gestión de Usuarios</h1>
+                    <p className="text-surface-500 text-sm mt-1">Administración de accesos y roles</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Formulario */}
+                  <div className="lg:col-span-1">
+                    <form onSubmit={handleSaveUser} className="card p-6 space-y-5 sticky top-24">
+                      <h3 className="font-bold text-surface-800 border-b border-surface-100 pb-3">
+                        {editingUserId ? 'Editar Usuario' : 'Nuevo Usuario'}
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="input-label">Usuario (Login)</label>
+                          <input 
+                            type="text" 
+                            required 
+                            className="input-field lowecase" 
+                            placeholder="ej. fcorascon"
+                            value={userForm.usuario} 
+                            onChange={e => setUserForm({...userForm, usuario: e.target.value.toLowerCase().replace(/\s/g, '')})} 
+                          />
+                        </div>
+
+                        <div>
+                          <label className="input-label">Nombre Completo</label>
+                          <input 
+                            type="text" 
+                            className="input-field" 
+                            placeholder="Nombre del capturista"
+                            value={userForm.nombre_completo} 
+                            onChange={e => setUserForm({...userForm, nombre_completo: e.target.value})} 
+                          />
+                        </div>
+
+                        <div>
+                          <label className="input-label">Rol del Sistema</label>
+                          <select 
+                            className="select-field"
+                            value={userForm.rol}
+                            onChange={e => setUserForm({...userForm, rol: e.target.value as any})}
+                          >
+                            <option value="CAPTURISTA">CAPTURISTA (Restringido)</option>
+                            <option value="ADMIN">ADMINISTRADOR (Total)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between">
+                            <label className="input-label">Contraseña</label>
+                            {editingUserId && <span className="text-[10px] text-surface-400 font-medium italic">Dejar vacío para mantener</span>}
+                          </div>
+                          <div className="relative">
+                            <input 
+                              type={showUserPassword ? 'text' : 'password'} 
+                              required={!editingUserId}
+                              className="input-field pr-10" 
+                              placeholder={editingUserId ? 'Nueva contraseña (opcional)' : 'Mínimo 6 caracteres'}
+                              value={userForm.password} 
+                              onChange={e => setUserForm({...userForm, password: e.target.value})} 
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowUserPassword(!showUserPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                            >
+                              {showUserPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button type="submit" className="flex-1 btn-primary">
+                          {editingUserId ? 'Actualizar' : 'Crear Usuario'}
+                        </button>
+                        {editingUserId && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleTabClick('usuarios_mgmt')}
+                            className="btn-ghost"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Listado */}
+                  <div className="lg:col-span-2">
+                    <div className="card overflow-hidden">
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Usuario</th>
+                              <th>Nombre / Rol</th>
+                              <th className="text-center">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usuarios.map(u => (
+                              <tr key={u.id} className={u.id === currentUser?.id ? 'bg-surface-50' : ''}>
+                                <td>
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${u.rol === 'ADMIN' ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-600'}`}>
+                                      {u.usuario.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="font-semibold text-surface-900">{u.usuario}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div>
+                                    <p className="text-sm font-medium text-surface-700">{u.nombre_completo || '—'}</p>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${u.rol === 'ADMIN' ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-500'}`}>
+                                      {u.rol}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button 
+                                      onClick={() => handleEditUser(u)} 
+                                      className="btn-icon" 
+                                      title="Editar"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteUser(u.id)} 
+                                      className={`btn-icon hover:!text-danger-600 hover:!bg-danger-50 ${u.id === currentUser?.id ? 'opacity-20 cursor-not-allowed' : ''}`} 
+                                      disabled={u.id === currentUser?.id}
+                                      title={u.id === currentUser?.id ? 'No puedes eliminarte a ti mismo' : 'Eliminar'}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -2040,10 +2341,18 @@ function Sidebar({
       Icon: BarChart2,
       isGroup: true,
       subItems: [
-        { id: 'reporte_cobertura', label: 'Cobertura', Icon: FileCheck },
         { id: 'reporte_rutas', label: 'Listados Op.', Icon: FileText },
       ]
     },
+    ...(currentUser.rol === 'ADMIN' ? [{
+      id: 'group_admin', 
+      label: 'Administración', 
+      Icon: Shield,
+      isGroup: true,
+      subItems: [
+        { id: 'usuarios_mgmt', label: 'Usuarios', Icon: Users },
+      ]
+    }] : []),
   ];
 
   return (
@@ -2145,44 +2454,55 @@ function Sidebar({
 }
 
 // --- Componente Login ---
-function Login({ onLoginSuccess }: { onLoginSuccess: (user: UsuarioManual) => void }) {
+function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function handleLogin(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setErrorMsg(null);
-    
+
     try {
-      // Normalizar usuario a minúsculas antes de enviar al RPC
-      const { data, error } = await (supabase as any).rpc('verify_user_password', { 
-        p_usuario: usuario.toLowerCase().trim(), 
-        p_password: password 
+      // 1. Intentar Login con Supabase Auth
+      const email = usuario.includes('@') ? usuario : `${usuario.toLowerCase().trim()}@seebc.com`;
+      const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
-      if (error) throw error;
-      
-      const res = data as { success: boolean, user?: UsuarioManual, message?: string };
-
-      if (!res.success) {
-        setErrorMsg(res.message || 'Usuario o contraseña incorrectos.');
-        toast.error('Credenciales incorrectas');
-      } else if (res.user) {
-        toast.success(`Bienvenido, ${res.user.usuario}`);
-        onLoginSuccess(res.user);
+      if (authError || !user) {
+        // SEGURIDAD 4.0: Jittering (Retardo aleatorio contra ataques de temporización)
+        const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        throw new Error('Las credenciales proporcionadas no son válidas.');
       }
+
+      // 2. Carga de Perfil Protegida
+      const { data: profile, error: profileError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Perfil de usuario no encontrado.');
+      }
+
+      toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
+      onLoginSuccess(profile);
     } catch (err: any) {
       console.error('Login error:', err);
-      setErrorMsg('Error de conexión con el servidor.');
-      toast.error('Error de conexión');
+      setErrorMsg(err.message || 'Error al iniciar sesión');
+      toast.error(err.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-surface-50">
@@ -2205,7 +2525,7 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: UsuarioManual) => vo
           </div>
         </div>
 
-        <form onSubmit={handleLogin} className="card p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-5">
           <div className="space-y-4">
             <div>
               <label className="input-label">Usuario</label>
