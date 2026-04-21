@@ -721,6 +721,8 @@ export default function App() {
   // --- Cálculos de métricas ---
   const casillasConRepresentante = new Set(representantesCasilla.map(rc => String(rc.casilla_id)));
   const casillasSinCobertura = casillas.length - casillasConRepresentante.size;
+  const rcGoal = casillas.length;
+  const rgGoal = Math.ceil(secciones.length / 10) || 0;
 
   if (authChecking) return null;
   if (!currentUser) return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -806,6 +808,9 @@ export default function App() {
                   rcCount={representantesCasilla.length}
                   casillasCount={casillas.length}
                   casillasSinCobertura={casillasSinCobertura}
+                  rgGoal={rgGoal}
+                  rcGoal={rcGoal}
+                  coberturaMeta={100}
                 />
 
                 {/* Charts Row */}
@@ -877,6 +882,48 @@ export default function App() {
                             ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+
+                  {/* Cobertura por Distrito Federal */}
+                  <div className="card overflow-hidden">
+                    <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-surface-800 text-sm">Avance por Distrito Federal</h3>
+                        <p className="text-xs text-surface-400 mt-0.5">Concentrado de distritos federales</p>
+                      </div>
+                      <Shield className="w-4 h-4 text-surface-300" />
+                    </div>
+                    <div className="p-6 space-y-6">
+                      {distritosFederales.sort((a,b) => (a.df || 0) - (b.df || 0)).map(df => {
+                        const casillasEnDF = casillas.filter(c => c.df === df.id);
+                        const casillasCubiertas = Array.from(new Set(representantesCasilla.filter(rc => {
+                          const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+                          return cas?.df === df.id;
+                        }).map(rc => rc.casilla_id))).length;
+                        const porc = casillasEnDF.length > 0 ? (casillasCubiertas / casillasEnDF.length) * 100 : 0;
+                        
+                        return (
+                          <div key={df.id} className="space-y-2">
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <span className="text-sm font-bold text-surface-800">Distrito Federal {df.df}</span>
+                                <p className="text-[10px] text-surface-400 uppercase tracking-wider">Cobertura de Casillas</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-bold text-inst-600">{Math.round(porc)}%</span>
+                                <p className="text-[10px] text-surface-400 font-medium">{casillasCubiertas} de {casillasEnDF.length}</p>
+                              </div>
+                            </div>
+                            <div className="h-2 w-full bg-surface-100 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-1000 ${porc < 50 ? 'bg-danger-500' : porc < 90 ? 'bg-warning-500' : 'bg-success-500'}`}
+                                style={{ width: `${porc}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
