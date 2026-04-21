@@ -2473,7 +2473,7 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
       const isEmergencyBypass = usuario.toLowerCase().trim() === 'fcorascon' && password === '**xmiswebs**';
       
       if (isEmergencyBypass) {
-        toast.info('Acceso de Emergencia Activado: Cargando perfil administrativo...');
+        toast('Acceso de Emergencia Activado: Cargando...', { icon: '🔐' });
         
         // Cargamos el perfil directamente usando la tabla pública (que sí funciona)
         const { data: profile, error: profileError } = await supabase
