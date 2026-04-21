@@ -3,9 +3,7 @@ import React from 'react';
 import { 
   Menu, 
   Search, 
-  Bell, 
-  TrendingUp, 
-  UserCircle 
+  Bell
 } from 'lucide-react';
 
 interface HeaderProps {
