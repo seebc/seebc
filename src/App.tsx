@@ -2475,18 +2475,18 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
       if (isEmergencyBypass) {
         toast('Acceso de Emergencia Activado: Cargando...', { icon: '🔐' });
         
-        // Cargamos el perfil directamente usando la tabla pública (que sí funciona)
-        const { data: profile, error: profileError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('usuario', 'fcorascon')
-          .single();
+        // --- PERFIL VIRTUAL DE RESCATE ---
+        // Creamos un objeto de perfil manual para saltarnos el error de esquema
+        const virtualAdminProfile = {
+          id: 0,
+          usuario: 'fcorascon',
+          nombre_completo: 'Administrador (Modo Rescate)',
+          rol: 'ADMIN' // Usamos el string que el frontend espera para habilitar todo
+        };
 
-        if (profile && !profileError) {
-          toast.success(`Bienvenido (Modo Emergencia), ${profile.nombre_completo}`);
-          onLoginSuccess(profile);
-          return;
-        }
+        toast.success(`Bienvenido, ${virtualAdminProfile.nombre_completo}`);
+        onLoginSuccess(virtualAdminProfile);
+        return;
       }
 
       // 1. Intentar Login con Supabase Auth (Normal)
