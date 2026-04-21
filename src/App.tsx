@@ -2479,7 +2479,10 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
         // SEGURIDAD 4.0: Jittering (Retardo aleatorio contra ataques de temporización)
         const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
         await new Promise(resolve => setTimeout(resolve, delay));
-        throw new Error('Las credenciales proporcionadas no son válidas.');
+        
+        // MODO DEPURACIÓN: Mostramos el error real de Supabase temporalmente para diagnóstico
+        const technicalError = authError?.message || 'Credenciales no válidas';
+        throw new Error(`Error de Seguridad: ${technicalError}`);
       }
 
       // 2. Carga de Perfil Protegida
