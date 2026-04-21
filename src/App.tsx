@@ -330,9 +330,9 @@ export default function App() {
   // --- Seguridad 4.0: Ofuscación y Anti-Reconocimiento ---
   const handleSecurityError = (err: any, customMsg: string) => {
     // Log interno para depuración del desarrollador (oculto para el usuario final en prod)
-    console.warn(`[Security Alert] Access event recorded: ${Date.now()}`);
-    // No revelamos la estructura ni el origen del error
-    toast.error('Acceso restringido: Violación de protocolo de seguridad o sesión expirada.');
+    console.error(`[Security Alert] ${customMsg}:`, err);
+    // No revelamos la estructura ni el origen del error (temporalmente mostrando en toast para debug)
+    toast.error(`Error de guardado: ${err?.message || err?.details || 'Violación de protocolo de seguridad'}`);
   };
 
   // --- Handlers: Representantes Generales ---
@@ -702,11 +702,21 @@ export default function App() {
   return (
     <ErrorBoundary>
     <>
-      <Toaster position="top-right" toastOptions={{ 
-        style: { borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '13px', fontWeight: '500', fontFamily: 'Inter, sans-serif' },
-        success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
-        error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } }
-      }} />
+      <Toaster 
+        position="top-center" 
+        containerStyle={{
+          top: '50%',
+          left: '50%',
+          bottom: 'auto',
+          right: 'auto',
+          transform: 'translate(-50%, -50%)'
+        }}
+        toastOptions={{ 
+          style: { borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '13px', fontWeight: '500', fontFamily: 'Inter, sans-serif' },
+          success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } }
+        }} 
+      />
 
       <div className="min-h-screen bg-surface-50 flex">
 
