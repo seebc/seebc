@@ -6,9 +6,9 @@ CREATE OR REPLACE FUNCTION public.save_rg_secure(
 DECLARE
   v_result jsonb;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
-  END IF;
+  -- IF auth.uid() IS NULL THEN
+  --   RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
+  -- END IF;
 
   IF p_id IS NOT NULL THEN
     UPDATE public.rg SET
@@ -80,9 +80,9 @@ CREATE OR REPLACE FUNCTION public.save_rc_secure(
 DECLARE
   v_result jsonb;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
-  END IF;
+  -- IF auth.uid() IS NULL THEN
+  --   RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
+  -- END IF;
 
   IF p_id IS NOT NULL THEN
     UPDATE public.rc SET
@@ -158,9 +158,9 @@ CREATE OR REPLACE FUNCTION public.save_ruta_secure(
 DECLARE
   v_result jsonb;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
-  END IF;
+  -- IF auth.uid() IS NULL THEN
+  --   RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
+  -- END IF;
 
   IF p_id IS NOT NULL THEN
     UPDATE public.rutas SET
@@ -199,9 +199,9 @@ CREATE OR REPLACE FUNCTION public.save_casilla_secure(
 DECLARE
   v_result jsonb;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
-  END IF;
+  -- IF auth.uid() IS NULL THEN
+  --   RAISE EXCEPTION 'No autorizado: Se requiere sesión activa.';
+  -- END IF;
 
   IF p_id IS NOT NULL THEN
     UPDATE public.casillas SET
