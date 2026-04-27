@@ -70,7 +70,7 @@ interface RGFormData {
 
 interface RCFormData extends RGFormData {
   casilla_id: string;
-  tipo_nombramiento: 'Propietario' | 'Suplente';
+  tipo_nombramiento: 'PROPIETARIO 1' | 'PROPIETARIO 2' | 'SUPLENTE 1' | 'SUPLENTE 2';
 }
 
 // --- Componente de Error para el Dashboard ---
@@ -143,7 +143,7 @@ export default function App() {
   const [rcForm, setRcForm] = useState<RCFormData>({
     nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
     municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '',
-    tipo_nombramiento: 'Propietario', credencial_vigente: true, es_militante: false,
+    tipo_nombramiento: 'PROPIETARIO 1', credencial_vigente: true, es_militante: false,
     calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
     autoriza_propaganda: false, tipo_propaganda: 'Ninguno', firma_capturada: false
   });
@@ -176,6 +176,9 @@ export default function App() {
   });
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [showUserPassword, setShowUserPassword] = useState(false);
+
+  // --- Map Modal ---
+  const [selectedMapCasilla, setSelectedMapCasilla] = useState<Casilla | null>(null);
 
   // --- Edición ---
   const [editingRgId, setEditingRgId] = useState<number | null>(null);
@@ -306,6 +309,7 @@ export default function App() {
     setEditingRutaId(null);
     setEditingCasillaIntId(null);
     setEditingUserId(null);
+    setSelectedMapCasilla(null);
     setRgValidado(false);
     setRcValidado(false);
     setCredencialValidacion('');
@@ -326,7 +330,7 @@ export default function App() {
       setRcForm({
         nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
         municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '',
-        tipo_nombramiento: 'Propietario' as any, credencial_vigente: true, es_militante: false,
+        tipo_nombramiento: 'PROPIETARIO 1' as any, credencial_vigente: true, es_militante: false,
         calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
         autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
       });
@@ -505,7 +509,7 @@ export default function App() {
       dl_id: rc.dl_id ? String(rc.dl_id) : '', 
       seccion_id: rc.seccion_id ? String(rc.seccion_id) : '',
       casilla_id: rc.casilla_id ? String(rc.casilla_id) : '', 
-      tipo_nombramiento: rc.tipo_nombramiento || 'Propietario',
+      tipo_nombramiento: rc.tipo_nombramiento || 'PROPIETARIO 1',
       credencial_vigente: rc.credencial_vigente, es_militante: rc.es_militante,
       calle: rc.calle || '', num_ext: rc.num_ext || '', num_int: rc.num_int || '', colonia: rc.colonia || '', 
       codigo_postal: rc.codigo_postal || '', telefono: rc.telefono || '', correo_electronico: rc.correo_electronico || '',
@@ -1500,8 +1504,10 @@ export default function App() {
                       <div>
                         <label className="input-label">Tipo Registro</label>
                         <select className="select-field" value={rcForm.tipo_nombramiento} onChange={e => setRcForm({...rcForm, tipo_nombramiento: e.target.value as any})}>
-                          <option value="Propietario">Propietario</option>
-                          <option value="Suplente">Suplente</option>
+                          <option value="PROPIETARIO 1">PROPIETARIO 1</option>
+                          <option value="PROPIETARIO 2">PROPIETARIO 2</option>
+                          <option value="SUPLENTE 1">SUPLENTE 1</option>
+                          <option value="SUPLENTE 2">SUPLENTE 2</option>
                         </select>
                       </div>
                     </div>
@@ -1816,6 +1822,13 @@ export default function App() {
                             <td className="text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <button 
+                                  onClick={() => setSelectedMapCasilla(cas)} 
+                                  className="p-1.5 text-success-600 hover:bg-success-50 rounded-lg transition-colors" 
+                                  title="Ver en Mapa"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                </button>
+                                <button 
                                   onClick={() => handleEditCasilla(cas)} 
                                   className="p-1.5 text-inst-600 hover:bg-inst-50 rounded-lg transition-colors" 
                                   title="Editar Casilla"
@@ -1845,6 +1858,43 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Modal de Mapa */}
+                {selectedMapCasilla && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-surface-900/60 backdrop-blur-sm" onClick={() => setSelectedMapCasilla(null)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
+                      <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center bg-surface-50">
+                        <div>
+                          <h3 className="font-bold text-surface-900 text-lg">Ubicación de Casilla {selectedMapCasilla.casilla}</h3>
+                          <p className="text-xs text-surface-500 mt-0.5">{selectedMapCasilla.ubicación || 'Ubicación no especificada'}</p>
+                        </div>
+                        <button onClick={() => setSelectedMapCasilla(null)} className="p-2 text-surface-400 hover:bg-surface-200 rounded-full transition-colors">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="p-0 flex-1 min-h-[400px] sm:min-h-[500px] bg-surface-100 relative">
+                        {selectedMapCasilla.ubicación ? (
+                          <iframe
+                            title="Mapa de Casilla"
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{ border: 0, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedMapCasilla.ubicación + ', ' + (municipios.find(m => String(m.id) === String(selectedMapCasilla.municipio))?.municipio || '') + ', Baja California')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                            allowFullScreen
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-surface-400 p-6 text-center">
+                            <svg className="w-12 h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <p className="font-medium text-surface-600">No hay ubicación registrada</p>
+                            <p className="text-xs mt-1 max-w-sm">Edite esta casilla para agregar la ubicación antes de visualizarla en el mapa.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
