@@ -21,7 +21,7 @@ FOR SELECT
 TO authenticated
 USING (
     user_id = auth.uid() OR 
-    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol = 'ADMIN')
+    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol::text = 'ADMIN')
 );
 
 -- 3. Políticas para RG (Representantes Generales)
@@ -31,7 +31,7 @@ ON public.rg
 FOR ALL
 TO authenticated
 USING (
-    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol = 'ADMIN') OR
+    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol::text = 'ADMIN') OR
     capturista_id IN (SELECT id FROM public.usuarios WHERE user_id = auth.uid())
 );
 
@@ -42,7 +42,7 @@ ON public.rc
 FOR ALL
 TO authenticated
 USING (
-    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol = 'ADMIN') OR
+    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol::text = 'ADMIN') OR
     capturista_id IN (SELECT id FROM public.usuarios WHERE user_id = auth.uid())
 );
 
@@ -53,7 +53,7 @@ ON public.rutas
 FOR ALL
 TO authenticated
 USING (
-    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol = 'ADMIN') OR
+    EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol::text = 'ADMIN') OR
     capturista_id IN (SELECT id FROM public.usuarios WHERE user_id = auth.uid())
 );
 
@@ -66,7 +66,7 @@ CREATE POLICY "Only admins can edit casillas"
 ON public.casillas
 FOR ALL
 TO authenticated
-USING (EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol = 'ADMIN'));
+USING (EXISTS (SELECT 1 FROM public.usuarios WHERE user_id = auth.uid() AND rol::text = 'ADMIN'));
 
 -- 7. Función de utilidad para verificar permisos en los RPCs
 -- Esta función se usará dentro de los RPCs para una validación más robusta
@@ -75,8 +75,7 @@ RETURNS boolean AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1 FROM public.usuarios 
-        WHERE user_id = auth.uid() 
-        AND (rol = 'ADMIN' OR id = p_target_capturista_id)
+        WHERE user_id = auth.uid() AND (rol::text = 'ADMIN' OR id = p_target_capturista_id)
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
