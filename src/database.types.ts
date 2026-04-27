@@ -336,10 +336,57 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_login: {
+        Args: {
+          p_usuario: string
+          p_contrasena: string
+        }
+        Returns: {
+          id: number
+          usuario: string
+          rol: string
+          nombre_completo: string
+        }
+      }
+      create_new_auth_user: {
+        Args: {
+          p_email: string
+          p_password: string
+          p_nombre: string
+        }
+        Returns: string
+      }
+      save_rg_secure: {
+        Args: {
+          p_id: number | null
+          p_payload: any
+        }
+        Returns: any
+      }
+      save_rc_secure: {
+        Args: {
+          p_id: number | null
+          p_payload: any
+        }
+        Returns: any
+      }
+      save_ruta_secure: {
+        Args: {
+          p_id: number | null
+          p_payload: any
+        }
+        Returns: any
+      }
+      save_casilla_secure: {
+        Args: {
+          p_id: number | null
+          p_payload: any
+        }
+        Returns: any
+      }
     }
     Enums: {
-      tipo_nombramiento: "Propietario" | "Suplente"
+      tipo_nombramiento: "PROPIETARIO 1" | "PROPIETARIO 2" | "SUPLENTE 1" | "SUPLENTE 2"
       tipo_propaganda: "Ninguno" | "Lona" | "Pinta de Barda" | "Otro"
     }
     CompositeTypes: {
