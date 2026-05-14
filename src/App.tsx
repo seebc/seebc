@@ -688,31 +688,20 @@ export default function App() {
     }
 
     try {
-      if (editingUserId) {
-        // Actualización básica de perfil
-        const { error } = await supabase
-          .from('usuarios')
-          .update({
-            usuario: userForm.usuario.toLowerCase().trim(),
-            rol: userForm.rol,
-            nombre_completo: userForm.nombre_completo || null
-          })
-          .eq('id', editingUserId);
-        if (error) throw error;
-      } else {
-        // Creación avanzada (Auth + Perfil) vía RPC de seguridad
-        const dummyEmail = `${userForm.usuario.toLowerCase().trim()}@seebc.com`;
-        const { data, error } = await (supabase as any).rpc('create_new_auth_user', {
-          p_email: dummyEmail,
-          p_password: userForm.password,
-          p_username: userForm.usuario.toLowerCase().trim(),
-          p_nombre: userForm.nombre_completo || '',
-          p_rol: userForm.rol
-        });
+      // p_id es el último parámetro (DEFAULT NULL) para evitar confusión de tipos en PostgREST
+      const baseParams = {
+        p_usuario: userForm.usuario.toLowerCase().trim(),
+        p_password: userForm.password || '',
+        p_rol: userForm.rol,
+        p_nombre_completo: userForm.nombre_completo || ''
+      };
 
-        if (error) throw error;
-        if (data && !data.success) throw new Error(data.error);
-      }
+      const rpcParams = editingUserId
+        ? { ...baseParams, p_id: editingUserId }  // Edición: incluir p_id
+        : baseParams;                               // Creación: omitir p_id (DEFAULT NULL en BD)
+
+      const { error } = await supabase.rpc('save_user', rpcParams);
+      if (error) throw error;
 
       toast.success(editingUserId ? 'Usuario actualizado' : 'Usuario creado');
       setEditingUserId(null);
