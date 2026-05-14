@@ -688,14 +688,13 @@ export default function App() {
     }
 
     try {
-      // Siempre se envían los 5 parámetros para evitar ambigüedad en PostgREST.
-      // p_id = 0 significa "crear nuevo"; cualquier número > 0 = actualizar.
+      // Llamada RPC con parámetros en orden alfabético para máxima compatibilidad con PostgREST
       const { error } = await supabase.rpc('save_user', {
         p_id: editingUserId ?? 0,
-        p_usuario: userForm.usuario.toLowerCase().trim(),
+        p_nombre_completo: userForm.nombre_completo || '',
         p_password: userForm.password || '',
         p_rol: userForm.rol,
-        p_nombre_completo: userForm.nombre_completo || ''
+        p_usuario: userForm.usuario.toLowerCase().trim()
       });
       if (error) throw error;
 
