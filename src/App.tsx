@@ -695,13 +695,13 @@ export default function App() {
     }
 
     try {
-      // Usando prefijo arg_ para evitar conflictos de nombres y forzar actualización de cache
-      const { error } = await supabase.rpc('save_user', {
-        arg_id: editingUserId ?? 0,
-        arg_nombre_completo: userForm.nombre_completo || '',
-        arg_password: userForm.password || '',
-        arg_rol: userForm.rol,
-        arg_usuario: userForm.usuario.toLowerCase().trim()
+      // Nueva función robusta para evitar problemas de cache de PostgREST
+      const { error } = await supabase.rpc('manage_user_secure', {
+        in_id: editingUserId ?? 0,
+        in_usuario: userForm.usuario.toLowerCase().trim(),
+        in_password: userForm.password || '',
+        in_rol: userForm.rol,
+        in_nombre_completo: userForm.nombre_completo || ''
       });
       if (error) throw error;
 
