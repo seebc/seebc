@@ -688,19 +688,15 @@ export default function App() {
     }
 
     try {
-      // p_id es el último parámetro (DEFAULT NULL) para evitar confusión de tipos en PostgREST
-      const baseParams = {
+      // Siempre se envían los 5 parámetros para evitar ambigüedad en PostgREST.
+      // p_id = 0 significa "crear nuevo"; cualquier número > 0 = actualizar.
+      const { error } = await supabase.rpc('save_user', {
+        p_id: editingUserId ?? 0,
         p_usuario: userForm.usuario.toLowerCase().trim(),
         p_password: userForm.password || '',
         p_rol: userForm.rol,
         p_nombre_completo: userForm.nombre_completo || ''
-      };
-
-      const rpcParams = editingUserId
-        ? { ...baseParams, p_id: editingUserId }  // Edición: incluir p_id
-        : baseParams;                               // Creación: omitir p_id (DEFAULT NULL en BD)
-
-      const { error } = await supabase.rpc('save_user', rpcParams);
+      });
       if (error) throw error;
 
       toast.success(editingUserId ? 'Usuario actualizado' : 'Usuario creado');
