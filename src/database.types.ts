@@ -348,13 +348,28 @@ export interface Database {
           nombre_completo: string
         }
       }
-      create_new_auth_user: {
+      save_user: {
         Args: {
-          p_email: string
+          p_usuario: string
           p_password: string
-          p_nombre: string
+          p_rol: string
+          p_nombre_completo: string
+          p_id?: number | null
         }
-        Returns: string
+        Returns: {
+          id: number
+          usuario: string
+          password: string
+          rol: string | null
+          nombre_completo: string | null
+        }
+      }
+      verify_user_password: {
+        Args: {
+          p_usuario: string
+          p_password: string
+        }
+        Returns: any
       }
       save_rg_secure: {
         Args: {
