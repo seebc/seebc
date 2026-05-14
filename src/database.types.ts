@@ -348,21 +348,15 @@ export interface Database {
           nombre_completo: string
         }
       }
-      save_user: {
+      manage_user_secure: {
         Args: {
-          arg_id: number
-          arg_nombre_completo: string
-          arg_password: string
-          arg_rol: string
-          arg_usuario: string
+          in_id: number
+          in_usuario: string
+          in_password: string
+          in_rol: string
+          in_nombre_completo: string
         }
-        Returns: {
-          id: number
-          usuario: string
-          password: string
-          rol: string | null
-          nombre_completo: string | null
-        }
+        Returns: Json
       }
       verify_user_password: {
         Args: {
