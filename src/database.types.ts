@@ -350,11 +350,11 @@ export interface Database {
       }
       save_user: {
         Args: {
-          p_id: number
-          p_nombre_completo: string
-          p_password: string
-          p_rol: string
-          p_usuario: string
+          arg_id: number
+          arg_nombre_completo: string
+          arg_password: string
+          arg_rol: string
+          arg_usuario: string
         }
         Returns: {
           id: number
