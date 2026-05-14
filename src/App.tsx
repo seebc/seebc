@@ -14,10 +14,14 @@ import {
   Shield,
   Eye,
   EyeOff,
-  Printer
+  Printer,
+  X,
+  Check,
+  MapPin,
+  AlertCircle
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
-import { Tables } from './database.types';
+import { Database, Tables } from './database.types';
 
 // Importar componentes modulares
 import Sidebar from './components/Sidebar';
@@ -232,7 +236,7 @@ export default function App() {
   useSessionTimeout(handleLogout, !!currentUser);
 
   // --- Carga de Datos con Paginación ---
-  const fetchAllFromTable = async (tableName: string, batchSize = 1000) => {
+  const fetchAllFromTable = async (tableName: keyof Database['public']['Tables'], batchSize = 1000) => {
     let allData: any[] = [];
     let from = 0;
     let to = batchSize - 1;
@@ -397,7 +401,8 @@ export default function App() {
         if (error) throw error;
         toast.success('Representante General actualizado');
       } else {
-        const { error } = await supabase.rpc('save_rg_secure', { p_id: null, p_payload: dataToSave });
+        // Usar 0 para nuevo registro (Estandarización anti-cache)
+        const { error } = await supabase.rpc('save_rg_secure', { p_id: 0, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante General registrado');
       }
@@ -483,7 +488,8 @@ export default function App() {
         if (error) throw error;
         toast.success('Representante de Casilla actualizado');
       } else {
-        const { error } = await supabase.rpc('save_rc_secure', { p_id: null, p_payload: dataToSave });
+        // Usar 0 para nuevo registro
+        const { error } = await supabase.rpc('save_rc_secure', { p_id: 0, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Representante de Casilla registrado');
       }
@@ -554,7 +560,8 @@ export default function App() {
         if (error) throw error;
         toast.success('Ruta actualizada');
       } else {
-        const { error } = await supabase.rpc('save_ruta_secure', { p_id: null, p_payload: dataToSave });
+        // Usar 0 para nuevo registro
+        const { error } = await supabase.rpc('save_ruta_secure', { p_id: 0, p_payload: dataToSave });
         if (error) throw error;
         toast.success('Ruta registrada');
       }
@@ -688,13 +695,13 @@ export default function App() {
     }
 
     try {
-      // Llamada RPC con parámetros en orden alfabético para máxima compatibilidad con PostgREST
+      // Usando prefijo arg_ para evitar conflictos de nombres y forzar actualización de cache
       const { error } = await supabase.rpc('save_user', {
-        p_id: editingUserId ?? 0,
-        p_nombre_completo: userForm.nombre_completo || '',
-        p_password: userForm.password || '',
-        p_rol: userForm.rol,
-        p_usuario: userForm.usuario.toLowerCase().trim()
+        arg_id: editingUserId ?? 0,
+        arg_nombre_completo: userForm.nombre_completo || '',
+        arg_password: userForm.password || '',
+        arg_rol: userForm.rol,
+        arg_usuario: userForm.usuario.toLowerCase().trim()
       });
       if (error) throw error;
 
