@@ -1617,11 +1617,31 @@ export default function App() {
                       </div>
                       <div>
                         <label className="input-label">Distrito Federal</label>
-                        <input type="text" readOnly className="input-field bg-surface-50 text-surface-400 cursor-not-allowed font-mono" value={rcForm.df_id ? `DF ${rcForm.df_id}` : '—'} />
+                        <select 
+                          required 
+                          className="select-field" 
+                          value={rcForm.df_id} 
+                          onChange={e => setRcForm({...rcForm, df_id: e.target.value})}
+                        >
+                          <option value="">Seleccionar...</option>
+                          {[...distritosFederales].sort((a,b) => (a.df || 0) - (b.df || 0)).map(d => (
+                            <option key={d.id} value={d.id}>DF {d.df}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="input-label">Distrito Local</label>
-                        <input type="text" readOnly className="input-field bg-surface-50 text-surface-400 cursor-not-allowed font-mono" value={rcForm.dl_id ? `DL ${rcForm.dl_id}` : '—'} />
+                        <select 
+                          required 
+                          className="select-field" 
+                          value={rcForm.dl_id} 
+                          onChange={e => setRcForm({...rcForm, dl_id: e.target.value})}
+                        >
+                          <option value="">Seleccionar...</option>
+                          {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => (
+                            <option key={d.id} value={d.id}>DL {d.dl}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
