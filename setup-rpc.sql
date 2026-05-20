@@ -10,7 +10,7 @@ BEGIN
     RAISE EXCEPTION 'No autorizado: Se requiere sesión activa y permisos adecuados.';
   END IF;
 
-  IF p_id IS NOT NULL THEN
+  IF p_id IS NOT NULL AND p_id > 0 THEN
     UPDATE public.rg SET
       nombre = (p_payload->>'nombre')::text,
       apellido_paterno = (p_payload->>'apellido_paterno')::text,
@@ -84,7 +84,7 @@ BEGIN
     RAISE EXCEPTION 'No autorizado: Se requiere sesión activa y permisos adecuados.';
   END IF;
 
-  IF p_id IS NOT NULL THEN
+  IF p_id IS NOT NULL AND p_id > 0 THEN
     UPDATE public.rc SET
       nombre = (p_payload->>'nombre')::text,
       apellido_paterno = (p_payload->>'apellido_paterno')::text,
@@ -162,7 +162,7 @@ BEGIN
     RAISE EXCEPTION 'No autorizado: Se requiere sesión activa y permisos adecuados.';
   END IF;
 
-  IF p_id IS NOT NULL THEN
+  IF p_id IS NOT NULL AND p_id > 0 THEN
     UPDATE public.rutas SET
       nombre_ruta = (p_payload->>'nombre_ruta')::text,
       df_id = (p_payload->>'df_id')::integer,
@@ -203,7 +203,7 @@ BEGIN
     RAISE EXCEPTION 'No autorizado: Se requiere sesión activa y permisos adecuados.';
   END IF;
 
-  IF p_id IS NOT NULL THEN
+  IF p_id IS NOT NULL AND p_id > 0 THEN
     UPDATE public.casillas SET
       casilla = (p_payload->>'casilla')::text,
       df = (p_payload->>'df')::integer,
