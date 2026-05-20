@@ -169,20 +169,22 @@ BEGIN
       dl_id = (p_payload->>'dl_id')::integer,
       representante_general_id = (p_payload->>'representante_general_id')::integer,
       municipio_id = (p_payload->>'municipio_id')::integer,
-      casillas_asignada = (p_payload->>'casillas_asignada')::json,
+      casillas_asignada = COALESCE((p_payload->>'casillas_asignada')::json, '[]'::json),
+      casillas_asignadas = COALESCE((p_payload->>'casillas_asignada')::json, '[]'::json),
       capturista_id = (p_payload->>'capturista_id')::integer
     WHERE id = p_id
     RETURNING to_jsonb(rutas.*) INTO v_result;
   ELSE
     INSERT INTO public.rutas (
-      nombre_ruta, df_id, dl_id, representante_general_id, municipio_id, casillas_asignada, capturista_id
+      nombre_ruta, df_id, dl_id, representante_general_id, municipio_id, casillas_asignada, casillas_asignadas, capturista_id
     ) VALUES (
       (p_payload->>'nombre_ruta')::text,
       (p_payload->>'df_id')::integer,
       (p_payload->>'dl_id')::integer,
       (p_payload->>'representante_general_id')::integer,
       (p_payload->>'municipio_id')::integer,
-      (p_payload->>'casillas_asignada')::json,
+      COALESCE((p_payload->>'casillas_asignada')::json, '[]'::json),
+      COALESCE((p_payload->>'casillas_asignada')::json, '[]'::json),
       (p_payload->>'capturista_id')::integer
     ) RETURNING to_jsonb(rutas.*) INTO v_result;
   END IF;
