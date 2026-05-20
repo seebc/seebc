@@ -16,8 +16,6 @@ import {
   EyeOff,
   Printer,
   X,
-  Check,
-  MapPin,
   AlertCircle
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -218,6 +216,16 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // --- Utilidades de Auditoría y Normalización ---
+  const normalizeText = useCallback((text: string) => 
+    text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "", []);
+
+  const matchesSearch = useCallback((item: any, fields: string[]) => {
+    if (!searchTerm) return true;
+    const q = normalizeText(searchTerm);
+    return fields.some(f => normalizeText(String(item[f] || "")).includes(q));
+  }, [searchTerm, normalizeText]);
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
