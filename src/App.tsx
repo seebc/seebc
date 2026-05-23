@@ -1060,7 +1060,7 @@ export default function App() {
                     {/* Print Header */}
                     <div className="p-6 border-b-2 border-surface-900 flex justify-between items-end">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2026</p>
+                        <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2027</p>
                         <h3 className="text-xl font-bold text-surface-900">
                           {reporteOpTipo === 'rg' ? `RG: ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.nombre} ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.apellido_paterno}` : 
                            reporteOpTipo === 'municipio' ? `Municipio: ${municipios.find(m => String(m.id) === reporteOpValor)?.municipio}` :
