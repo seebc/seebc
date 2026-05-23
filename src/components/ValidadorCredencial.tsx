@@ -41,10 +41,16 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
     }
 
     // Buscar duplicados
-    const encontrada = [...representantesGenerales, ...representantesCasilla].find(r => 
-      r.clave_elector === credencialValidacion && 
-      r.id !== (isRG ? editingRgId : editingRcId)
-    );
+    const encontrada = [...representantesGenerales, ...representantesCasilla].find(r => {
+      if (r.clave_elector !== credencialValidacion) return false;
+      const isRecordRG = !('casilla_id' in r);
+      if (isRG) {
+        if (isRecordRG && String(r.id) === String(editingRgId)) return false;
+      } else {
+        if (!isRecordRG && String(r.id) === String(editingRcId)) return false;
+      }
+      return true;
+    });
 
     if (encontrada) {
       setCredencialEncontrada(encontrada);
