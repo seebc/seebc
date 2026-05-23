@@ -1854,13 +1854,15 @@ export default function App() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button 
-                                  onClick={() => handleDeleteCasilla(cas.casilla_id)} 
-                                  className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
-                                  title="Eliminar Casilla"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {currentUser?.rol === 1 && (
+                                  <button 
+                                    onClick={() => handleDeleteCasilla(cas.casilla_id)} 
+                                    className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
+                                    title="Eliminar Casilla"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                             <td><span className="font-semibold text-inst-600 uppercase">{cas.casilla}</span></td>
