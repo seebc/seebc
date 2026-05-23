@@ -441,10 +441,23 @@
 
 /* Print Styles */
 @media print {
-  aside, nav, .no-print, button {
+  /* Ocultar cabecera de la app, sidebar, botones y elementos no imprimibles */
+  aside, nav, .no-print, button, header {
     display: none !important;
   }
-  
+
+  /* Eliminar márgenes del navegador para suprimir la URL y fecha automáticas */
+  @page {
+    margin: 0;
+    size: letter;
+  }
+
+  /* Compensar con padding propio en el body */
+  body {
+    background-color: white !important;
+    padding: 1cm 1.5cm !important;
+  }
+
   main {
     margin: 0 !important;
     padding: 0 !important;
@@ -456,14 +469,6 @@
     border: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-  }
-
-  body {
-    background-color: white !important;
-  }
-
-  header {
-    margin-bottom: 2rem !important;
   }
 }
 
