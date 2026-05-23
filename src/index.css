@@ -449,7 +449,7 @@
   /* Eliminar márgenes del navegador para suprimir la URL y fecha automáticas */
   @page {
     margin: 0;
-    size: letter;
+    size: letter landscape;
   }
 
   /* Compensar con padding propio en el body */
