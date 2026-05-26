@@ -1078,67 +1078,73 @@ export default function App() {
                        <thead>
                           <tr>
                              <th>Casilla</th>
-                             {reporteOpTipo !== 'rg' && <th>RG</th>}
-                             <th>Nombre del Representante</th>
                              <th>Tipo</th>
+                             <th>Nombre del Representante</th>
                              <th>Celular</th>
                              <th>Correo Electrónico</th>
-                             <th>Ubicación de Casilla</th>
+                             <th>RG</th>
                           </tr>
                        </thead>
                        <tbody>
-                          {representantesCasilla
-                            .filter(rc => {
-                              const cas = casillas.find(c => String(c.casilla_id) === String(rc.casilla_id));
+                          {casillas
+                            .filter(c => {
                               if (reporteOpTipo === 'rg') {
                                 const ruta = rutas.find(r => 
                                   Array.isArray(r.casillas_asignada) && 
-                                  r.casillas_asignada.map(String).includes(String(rc.casilla_id))
+                                  r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                 );
                                 return String(ruta?.representante_general_id || '') === reporteOpValor;
                               }
-                              if (reporteOpTipo === 'municipio') return String(cas?.municipio || '') === reporteOpValor;
-                              if (reporteOpTipo === 'df') return String(rc.df_id) === reporteOpValor;
-                              if (reporteOpTipo === 'dl') return String(rc.dl_id) === reporteOpValor;
+                              if (reporteOpTipo === 'municipio') return String(c.municipio || '') === reporteOpValor;
+                              if (reporteOpTipo === 'df') return String(c.df || '') === reporteOpValor;
+                              if (reporteOpTipo === 'dl') return String(c.dl || '') === reporteOpValor;
                               return false;
                             })
-                            .sort((a,b) => {
-                              const casA = casillas.find(c => c.casilla_id === a.casilla_id)?.casilla || '';
-                              const casB = casillas.find(c => c.casilla_id === b.casilla_id)?.casilla || '';
-                              return (casA || '').localeCompare(casB || '', undefined, {numeric: true, sensitivity: 'base'});
-                            })
-                            .map(rc => {
-                               const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+                            .sort((a,b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, {numeric: true, sensitivity: 'base'}))
+                            .flatMap(c => {
                                const ruta = rutas.find(r => 
                                  Array.isArray(r.casillas_asignada) && 
-                                 r.casillas_asignada.map(String).includes(String(rc.casilla_id))
+                                 r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                );
                                const rg = ruta ? representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id)) : null;
+                               const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'SIN ASIGNAR';
 
-                               return (
-                                 <tr key={rc.id}>
-                                   <td><span className="font-semibold text-surface-900 whitespace-nowrap text-xs">{cas?.casilla || 'N/A'}</span></td>
-                                   {reporteOpTipo !== 'rg' && (
-                                     <td><span className="text-xs text-surface-600 uppercase font-medium">{rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</span></td>
-                                   )}
-                                   <td><span className="font-semibold text-surface-800 uppercase text-xs">{rc.nombre} {rc.apellido_paterno} {rc.apellido_materno || ''}</span></td>
-                                   <td><span className="text-xs text-surface-500">{rc.tipo_nombramiento}</span></td>
-                                   <td><span className="text-xs font-medium text-inst-600 font-mono">{rc.telefono || '—'}</span></td>
-                                   <td><span className="text-xs text-surface-400 truncate max-w-[150px] inline-block">{rc.correo_electronico || '—'}</span></td>
-                                   <td><span className="text-[10px] text-surface-500 italic">{cas?.ubicación || '—'}</span></td>
-                                 </tr>
-                               );
+                               const roles = ['PROPIETARIO 1', 'SUPLENTE 1', 'PROPIETARIO 2', 'SUPLENTE 2'];
+                               const rcsForCasilla = representantesCasilla.filter(rc => rc.casilla_id === c.casilla_id);
+
+                               return roles.map(role => {
+                                 const rc = rcsForCasilla.find(r => r.tipo_nombramiento === role);
+                                 return (
+                                   <tr key={`${c.casilla_id}-${role}`} className={!rc ? "bg-danger-50/30" : ""}>
+                                     <td><span className="font-semibold text-surface-900 whitespace-nowrap text-xs">{c.casilla || 'N/A'}</span></td>
+                                     <td><span className="text-xs text-surface-500 font-medium">{role}</span></td>
+                                     <td>
+                                       {rc ? (
+                                         <span className="font-semibold text-surface-800 uppercase text-xs">
+                                           {rc.nombre} {rc.apellido_paterno} {rc.apellido_materno || ''}
+                                         </span>
+                                       ) : (
+                                         <span className="text-xs text-danger-600 font-semibold italic">SIN ASIGNAR</span>
+                                       )}
+                                     </td>
+                                     <td><span className="text-xs font-medium text-inst-600 font-mono">{rc?.telefono || '—'}</span></td>
+                                     <td><span className="text-xs text-surface-400 truncate max-w-[150px] inline-block">{rc?.correo_electronico || '—'}</span></td>
+                                     <td><span className="text-xs text-surface-600 uppercase font-medium">{rgName}</span></td>
+                                   </tr>
+                                 );
+                               });
                             })}
-                          {representantesCasilla.filter(rc => {
+                          {casillas.filter(c => {
                               if (reporteOpTipo === 'rg') {
                                 const ruta = rutas.find(r => 
                                   Array.isArray(r.casillas_asignada) && 
-                                  r.casillas_asignada.map(String).includes(String(rc.casilla_id))
+                                  r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                 );
                                 return String(ruta?.representante_general_id) === reporteOpValor;
                               }
-                              if (reporteOpTipo === 'df') return String(rc.df_id) === reporteOpValor;
-                              if (reporteOpTipo === 'dl') return String(rc.dl_id) === reporteOpValor;
+                              if (reporteOpTipo === 'municipio') return String(c.municipio || '') === reporteOpValor;
+                              if (reporteOpTipo === 'df') return String(c.df || '') === reporteOpValor;
+                              if (reporteOpTipo === 'dl') return String(c.dl || '') === reporteOpValor;
                               return false;
                           }).length === 0 && (
                             <tr>
