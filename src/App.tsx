@@ -121,7 +121,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   // --- UI y Navegación ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_rutas' | 'usuarios_mgmt'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_rutas' | 'reporte_por_ruta' | 'usuarios_mgmt'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -133,6 +133,9 @@ export default function App() {
   // --- Estados para Reportes Operativos ---
   const [reporteOpTipo, setReporteOpTipo] = useState<'rg' | 'df' | 'dl' | 'municipio'>('rg');
   const [reporteOpValor, setReporteOpValor] = useState<string>('');
+
+  // --- Estados para Reporte por Ruta ---
+  const [reporteRutaId, setReporteRutaId] = useState<string>('');
 
   // --- Formularios ---
   const [rgForm, setRgForm] = useState<RGFormData>({
@@ -772,6 +775,7 @@ export default function App() {
     rutas_form: editingRutaId ? 'Editar Ruta' : 'Nueva Ruta',
     rutas_list: 'Listado de Rutas',
     reporte_rutas: 'Listados Operativos',
+    reporte_por_ruta: 'Reporte por Ruta',
     usuarios_mgmt: 'Gestión de Usuarios',
   };
 
@@ -2115,6 +2119,140 @@ export default function App() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* ============ REPORTE POR RUTA ============ */}
+            {activeTab === 'reporte_por_ruta' && (
+              <div className="space-y-6 animate-fade-in-up">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 no-print">
+                  <div>
+                    <h1 className="text-2xl font-bold text-surface-900">Reporte por Ruta</h1>
+                    <p className="text-surface-500 text-sm mt-1">Detalle de casillas y representantes por ruta — Tamaño carta</p>
+                  </div>
+                  <button
+                    onClick={() => window.print()}
+                    disabled={!reporteRutaId}
+                    className="btn-primary"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimir Reporte
+                  </button>
+                </div>
+
+                <div className="card p-6 no-print">
+                  <div>
+                    <label className="input-label">Seleccionar Ruta</label>
+                    <select
+                      className="select-field"
+                      value={reporteRutaId}
+                      onChange={(e) => setReporteRutaId(e.target.value)}
+                    >
+                      <option value="">— Elige una ruta —</option>
+                      {[...rutas]
+                        .sort((a, b) => a.nombre_ruta.localeCompare(b.nombre_ruta))
+                        .map(r => {
+                          const rg = representantesGenerales.find(g => String(g.id) === String(r.representante_general_id));
+                          return (
+                            <option key={r.id} value={r.id}>
+                              {r.nombre_ruta}{rg ? ` — RG: ${rg.nombre} ${rg.apellido_paterno}` : ''}
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+                </div>
+
+                {reporteRutaId ? (() => {
+                  const ruta = rutas.find(r => String(r.id) === reporteRutaId);
+                  if (!ruta) return null;
+                  const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                  const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'SIN ASIGNAR';
+                  const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
+                  const casillasDeRuta = casillas
+                    .filter(c => casillaIds.includes(String(c.casilla_id)))
+                    .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
+                  const roles = ['PROPIETARIO 1', 'SUPLENTE 1', 'PROPIETARIO 2', 'SUPLENTE 2'];
+
+                  return (
+                    <div className="card overflow-hidden printable-area">
+                      {/* Print Header */}
+                      <div className="p-6 border-b-2 border-surface-900 flex justify-between items-end">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2027</p>
+                          <h3 className="text-xl font-bold text-surface-900">Ruta: {ruta.nombre_ruta}</h3>
+                          <p className="text-sm font-medium text-surface-600">RG: {rgName}</p>
+                          <p className="text-xs text-surface-400">
+                            {municipios.find(m => m.id === ruta.municipio_id)?.municipio || ''}
+                            {ruta.df_id ? ` · DF ${distritosFederales.find(d => d.id === ruta.df_id)?.df}` : ''}
+                            {ruta.dl_id ? ` · DL ${distritosLocales.find(d => d.id === ruta.dl_id)?.dl}` : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-medium text-surface-400 uppercase tracking-wider">{casillasDeRuta.length} casillas</p>
+                          <p className="text-sm font-semibold text-surface-800">{new Date().toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Casilla</th>
+                            <th>Tipo</th>
+                            <th>Nombre del Representante</th>
+                            <th>Celular</th>
+                            <th>Correo Electrónico</th>
+                            <th>RG</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {casillasDeRuta.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-12">
+                                <p className="text-sm text-surface-400">Esta ruta no tiene casillas asignadas</p>
+                              </td>
+                            </tr>
+                          ) : (
+                            casillasDeRuta.flatMap(c => {
+                              const rcsForCasilla = representantesCasilla.filter(rc => rc.casilla_id === c.casilla_id);
+                              return roles.map(role => {
+                                const rc = rcsForCasilla.find(r => r.tipo_nombramiento === role);
+                                return (
+                                  <tr key={`${c.casilla_id}-${role}`} className={!rc ? 'bg-danger-50/30' : ''}>
+                                    <td><span className="font-semibold text-surface-900 whitespace-nowrap text-xs">{c.casilla || 'N/A'}</span></td>
+                                    <td><span className="text-xs text-surface-500 font-medium">{role}</span></td>
+                                    <td>
+                                      {rc ? (
+                                        <span className="font-semibold text-surface-800 uppercase text-xs">
+                                          {rc.nombre} {rc.apellido_paterno} {rc.apellido_materno || ''}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-danger-600 font-semibold italic">SIN ASIGNAR</span>
+                                      )}
+                                    </td>
+                                    <td><span className="text-xs font-medium text-inst-600 font-mono">{rc?.telefono || '—'}</span></td>
+                                    <td><span className="text-xs text-surface-400 truncate max-w-[150px] inline-block">{rc?.correo_electronico || '—'}</span></td>
+                                    <td><span className="text-xs text-surface-600 uppercase font-medium">{rgName}</span></td>
+                                  </tr>
+                                );
+                              });
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })() : (
+                  <div className="card border-dashed border-2 py-20 flex flex-col items-center gap-4 text-center">
+                    <div className="w-14 h-14 bg-surface-100 rounded-2xl flex items-center justify-center">
+                      <Route className="w-7 h-7 text-surface-300" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-surface-600">Selecciona una Ruta</p>
+                      <p className="text-sm text-surface-400 mt-1">Elige una ruta del menú superior para generar el reporte detallado.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

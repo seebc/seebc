@@ -93,6 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       isGroup: true,
       subItems: [
         { id: 'reporte_rutas', label: 'Listados Op.', Icon: BarChart2 },
+        { id: 'reporte_por_ruta', label: 'Por Ruta', Icon: Route },
       ]
     },
   ];
