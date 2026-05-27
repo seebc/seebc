@@ -2522,12 +2522,12 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
                   type="text"
                   required
                   placeholder="Nombre de usuario"
-                  className="input-field pl-11 h-12 relative z-10 bg-transparent rounded-none"
+                  className="input-field !pl-11 h-12"
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   autoComplete="username"
                 />
-                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400 z-20 pointer-events-none group-focus-within:text-inst-500 transition-colors" />
+                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400 pointer-events-none group-focus-within:text-inst-500 transition-colors" />
               </div>
             </div>
 
@@ -2538,16 +2538,16 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="input-field pl-11 pr-11 h-12 relative z-10 bg-transparent rounded-none"
+                  className="input-field !pl-11 !pr-11 h-12"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                 />
-                <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400 z-20 pointer-events-none group-focus-within:text-inst-500 transition-colors" />
+                <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400 pointer-events-none group-focus-within:text-inst-500 transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 focus:text-inst-600 transition-colors z-30 p-1"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 focus:text-inst-600 transition-colors p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
