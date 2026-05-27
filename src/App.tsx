@@ -1839,8 +1839,10 @@ export default function App() {
                           // Match exact prefix or word boundary in casilla name (e.g. "653" matches "653 B1" but not "1653 B1")
                           const matchesCasilla = cname.startsWith(search) || cname.includes(` ${search}`);
                           
-                          // Allow searching by exact location substring if not matching a casilla name
-                          const matchesUbicacion = cubi.includes(search);
+                          // Si la búsqueda empieza con un número (como "2184"), probablemente están buscando la sección.
+                          // En este caso ignoramos la ubicación para que no haya falsos positivos con códigos postales o números de calle.
+                          const isNumericSearch = /^\d/.test(search);
+                          const matchesUbicacion = !isNumericSearch && cubi.includes(search);
                           
                           return matchesCasilla || matchesUbicacion;
                         })
