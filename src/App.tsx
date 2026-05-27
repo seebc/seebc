@@ -1835,18 +1835,14 @@ export default function App() {
                           
                           const cname = (c.casilla || '').toLowerCase();
                           const cubi = (c.ubicación || '').toLowerCase();
-                          const muni = municipios.find(m => String(m.id) === String(c.municipio))?.municipio?.toLowerCase() || '';
-                          const df = `df ${c.df}`;
-                          const dl = `dl ${c.dl}`;
                           
-                          const terms = search.split(/\s+/);
-                          return terms.every(t => 
-                            cname.includes(t) || 
-                            cubi.includes(t) || 
-                            muni.includes(t) || 
-                            df.includes(t) || 
-                            dl.includes(t)
-                          );
+                          // Match exact prefix or word boundary in casilla name (e.g. "653" matches "653 B1" but not "1653 B1")
+                          const matchesCasilla = cname.startsWith(search) || cname.includes(` ${search}`);
+                          
+                          // Allow searching by exact location substring if not matching a casilla name
+                          const matchesUbicacion = cubi.includes(search);
+                          
+                          return matchesCasilla || matchesUbicacion;
                         })
                         .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || ''))
                         .map((cas) => (
