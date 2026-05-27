@@ -446,16 +446,16 @@
     display: none !important;
   }
 
-  /* Eliminar márgenes del navegador para suprimir la URL y fecha automáticas */
+  /* Definir márgenes pequeños directamente en la página */
   @page {
-    margin: 0;
+    margin: 0.5cm;
     size: letter landscape;
   }
 
-  /* Compensar con padding propio en el body */
+  /* El padding en body ya no es tan necesario si se define el margin en @page */
   body {
     background-color: white !important;
-    padding: 1cm 1.5cm !important;
+    padding: 0 !important;
   }
 
   main {
