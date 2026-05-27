@@ -1043,7 +1043,7 @@ export default function App() {
                         >
                           <option value="">— Elige una opción —</option>
                           {reporteOpTipo === 'rg' && [...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => (
-                            <option key={rg.id} value={rg.id}>{rg.nombre} {rg.apellido_paterno}</option>
+                            <option key={rg.id} value={rg.id}>{`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}</option>
                           ))}
                           {reporteOpTipo === 'municipio' && [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => (
                             <option key={m.id} value={m.id}>{m.municipio}</option>
@@ -1066,7 +1066,10 @@ export default function App() {
                       <div className="space-y-1">
                         <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2027</p>
                         <h3 className="text-xl font-bold text-surface-900">
-                          {reporteOpTipo === 'rg' ? `RG: ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.nombre} ${representantesGenerales.find(r => String(r.id) === reporteOpValor)?.apellido_paterno}` : 
+                          {reporteOpTipo === 'rg' ? (() => {
+                            const rg = representantesGenerales.find(r => String(r.id) === reporteOpValor);
+                            return `RG: ${rg?.nombre || ''} ${rg?.apellido_paterno || ''} ${rg?.apellido_materno || ''}`.trim();
+                          })() : 
                            reporteOpTipo === 'municipio' ? `Municipio: ${municipios.find(m => String(m.id) === reporteOpValor)?.municipio}` :
                            reporteOpTipo === 'df' ? `Distrito Federal ${distritosFederales.find(d => String(d.id) === reporteOpValor)?.df}` :
                            `Distrito Local ${distritosLocales.find(d => String(d.id) === reporteOpValor)?.dl}`}
@@ -1111,7 +1114,7 @@ export default function App() {
                                  r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                );
                                const rg = ruta ? representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id)) : null;
-                               const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'SIN ASIGNAR';
+                               const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'SIN ASIGNAR';
 
                                const roles = ['PROPIETARIO 1', 'SUPLENTE 1', 'PROPIETARIO 2', 'SUPLENTE 2'];
                                const rcsForCasilla = representantesCasilla.filter(rc => rc.casilla_id === c.casilla_id);
@@ -1715,7 +1718,7 @@ export default function App() {
                               <td><span className="font-semibold text-surface-800 uppercase">{rc.nombre} {rc.apellido_paterno}</span></td>
                               <td><span className="font-semibold text-inst-600 text-xs">{cas?.casilla || 'N/A'}</span></td>
                               <td><span className="text-xs text-surface-500">{rc.tipo_nombramiento}</span></td>
-                              <td><span className="text-xs text-surface-600">{rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</span></td>
+                              <td><span className="text-xs text-surface-600">{rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'Sin asignar'}</span></td>
                               <td className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => handleEditRc(rc)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
@@ -1954,7 +1957,7 @@ export default function App() {
                       <label className="input-label">RG Responsable</label>
                       <select className="select-field" value={rutaForm.representante_general_id} onChange={e => setRutaForm({...rutaForm, representante_general_id: e.target.value})}>
                         <option value="">Seleccionar...</option>
-                        {[...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => <option key={rg.id} value={rg.id}>{rg.nombre} {rg.apellido_paterno}</option>)}
+                        {[...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => <option key={rg.id} value={rg.id}>{`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}</option>)}
                       </select>
                     </div>
                   </div>
@@ -2104,7 +2107,7 @@ export default function App() {
                         <div className="space-y-1 mt-2">
                           <p className="text-xs text-surface-500 flex justify-between">
                             <span>RG:</span> 
-                            <span className="font-medium text-surface-700">{rg ? `${rg.nombre} ${rg.apellido_paterno}` : 'Sin asignar'}</span>
+                            <span className="font-medium text-surface-700">{rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'Sin asignar'}</span>
                           </p>
                           <p className="text-xs text-surface-500 flex justify-between">
                             <span>Municipio:</span> 
@@ -2155,7 +2158,7 @@ export default function App() {
                           const rg = representantesGenerales.find(g => String(g.id) === String(r.representante_general_id));
                           return (
                             <option key={r.id} value={r.id}>
-                              {r.nombre_ruta}{rg ? ` — RG: ${rg.nombre} ${rg.apellido_paterno}` : ''}
+                              {r.nombre_ruta}{rg ? ` — RG: ${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trimEnd() : ''}
                             </option>
                           );
                         })}
