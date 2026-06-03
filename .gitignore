@@ -44,3 +44,8 @@ dist-ssr
 !package.json
 !package-lock.json
 !index.html
+
+# Permitir archivos de Telegram Bot
+!telegram-bot/src/**/*.js
+!telegram-bot/migrate.js
+
