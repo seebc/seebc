@@ -1,0 +1,9 @@
+﻿{
+  "language": "es-MX",
+  "preferred_language": "Español (México)",
+  "instructions": [
+    "Siempre comunícate y responde en Español de México.",
+    "Genera todos los planes de implementación, planes de verificación y resúmenes técnicos en español.",
+    "Los comentarios dentro del código generado deben escribirse en español."
+  ]
+}

@@ -32,3 +32,15 @@ dist-ssr
 
 # Supabase
 .supabase/
+
+# Personal tokens and scripts
+*.txt
+*.cjs
+*.js
+!src/**/*.ts
+!src/**/*.tsx
+!src/**/*.js
+!vite.config.ts
+!package.json
+!package-lock.json
+!index.html

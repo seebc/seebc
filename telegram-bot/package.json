@@ -1,0 +1,20 @@
+{
+  "name": "seebc-telegram-bot",
+  "version": "1.0.0",
+  "description": "Bot de Telegram para captura de RG y RC - SEEBC",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@grammyjs/conversations": "^2.0.3",
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.5.0",
+    "grammy": "^1.32.0"
+  },
+  "devDependencies": {
+    "pg": "^8.21.0"
+  }
+}

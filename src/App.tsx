@@ -177,7 +177,8 @@ export default function App() {
     usuario: '',
     nombre_completo: '',
     password: '',
-    rol: 'CAPTURISTA' as 'ADMIN' | 'CAPTURISTA'
+    rol: 'CAPTURISTA' as 'ADMIN' | 'CAPTURISTA',
+    telefono: ''
   });
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [showUserPassword, setShowUserPassword] = useState(false);
@@ -362,7 +363,7 @@ export default function App() {
       }
     } else if (tabId === 'usuarios_mgmt') {
       setEditingUserId(null);
-      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA' });
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA', telefono: '' });
       setShowUserPassword(false);
     }
   }, [editingRutaId]);
@@ -712,13 +713,14 @@ export default function App() {
         in_usuario: userForm.usuario.toLowerCase().trim(),
         in_password: userForm.password || '',
         in_rol: userForm.rol,
-        in_nombre_completo: userForm.nombre_completo || ''
+        in_nombre_completo: userForm.nombre_completo || '',
+        in_telefono: userForm.telefono ? userForm.telefono.replace(/\D/g, '').slice(0, 10) : ''
       });
       if (error) throw error;
 
       toast.success(editingUserId ? 'Usuario actualizado' : 'Usuario creado');
       setEditingUserId(null);
-      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA' });
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA', telefono: '' });
       fetchData();
     } catch (error: any) {
       handleSecurityError(error, 'Error al gestionar usuarios');
@@ -731,7 +733,8 @@ export default function App() {
       usuario: u.usuario,
       nombre_completo: u.nombre_completo || '',
       password: '', // No mostramos el hash
-      rol: (u.rol as any) || 'CAPTURISTA'
+      rol: (u.rol as any) || 'CAPTURISTA',
+      telefono: u.telefono || ''
     });
     setShowUserPassword(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2300,6 +2303,19 @@ export default function App() {
                         </div>
 
                         <div>
+                          <label className="input-label">📱 Teléfono (Telegram Bot)</label>
+                          <input 
+                            type="tel" 
+                            className="input-field" 
+                            placeholder="ej. 6641234567"
+                            maxLength={10}
+                            value={userForm.telefono} 
+                            onChange={e => setUserForm({...userForm, telefono: e.target.value.replace(/\D/g, '').slice(0,10)})} 
+                          />
+                          <p className="text-[10px] text-surface-400 mt-1">Número registrado en Telegram para acceso al bot</p>
+                        </div>
+
+                        <div>
                           <label className="input-label">Rol del Sistema</label>
                           <select 
                             className="select-field"
@@ -2362,6 +2378,7 @@ export default function App() {
                             <tr>
                               <th>Usuario</th>
                               <th>Nombre / Rol</th>
+                              <th>📱 Teléfono</th>
                               <th className="text-center">Acciones</th>
                             </tr>
                           </thead>
@@ -2383,6 +2400,13 @@ export default function App() {
                                       {u.rol}
                                     </span>
                                   </div>
+                                </td>
+                                <td>
+                                  {u.telefono ? (
+                                    <span className="text-sm text-surface-700 font-mono">{u.telefono}</span>
+                                  ) : (
+                                    <span className="text-xs text-surface-300 italic">Sin teléfono</span>
+                                  )}
                                 </td>
                                 <td className="text-center">
                                   <div className="flex items-center justify-center gap-1">

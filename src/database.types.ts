@@ -314,6 +314,8 @@ export interface Database {
           password: string
           rol: string | null
           nombre_completo: string | null
+          telefono: string | null
+          user_id: string | null
         }
         Insert: {
           id?: number
@@ -321,6 +323,8 @@ export interface Database {
           password: string
           rol?: string | null
           nombre_completo?: string | null
+          telefono?: string | null
+          user_id?: string | null
         }
         Update: {
           id?: number
@@ -328,6 +332,8 @@ export interface Database {
           password?: string
           rol?: string | null
           nombre_completo?: string | null
+          telefono?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -355,6 +361,7 @@ export interface Database {
           in_password: string
           in_rol: string
           in_nombre_completo: string
+          in_telefono?: string
         }
         Returns: Json
       }
