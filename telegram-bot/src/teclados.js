@@ -8,11 +8,13 @@ export const tecladoCompartirTelefono = new Keyboard()
 
 // ── Menú principal (inline) ────────────────────────────────────────────────
 export const menuPrincipal = new InlineKeyboard()
-  .text('👤 Capturar RG (General)', 'menu_rg')
+  .text('📝 Nuevo Registro RG', 'menu_registro_rg')
+  .text('📝 Nuevo Registro RC', 'menu_registro_rc')
   .row()
-  .text('🗳️ Capturar RC (Casilla)', 'menu_rc')
+  .text('👤 Reporte RG', 'menu_rg')
+  .text('🗳️ Reporte RC', 'menu_rc')
   .row()
-  .text('📋 Mis capturas', 'menu_capturas');
+  .text('📋 Mis reportes', 'menu_capturas');
 
 // ── Confirmación genérica ──────────────────────────────────────────────────
 export function tecladoConfirmar(prefijo) {

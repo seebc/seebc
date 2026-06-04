@@ -12,6 +12,8 @@ import { authMiddleware } from './middleware.js';
 import { tecladoCompartirTelefono, menuPrincipal } from './teclados.js';
 import { conversacionRG } from './conversations/captura_rg.js';
 import { conversacionRC } from './conversations/captura_rc.js';
+import { conversacionRegistroRG } from './conversations/registro_rg.js';
+import { conversacionRegistroRC } from './conversations/registro_rc.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INICIALIZACIÓN
@@ -26,12 +28,41 @@ const bot = new Bot(process.env.BOT_TOKEN);
 // Sesiones en memoria (en producción usar @grammyjs/storage-redis o similar)
 bot.use(session({ initial: () => ({}) }));
 
+// Global middleware to attach ctx.miembro before conversations intercept the updates
+bot.use(async (ctx, next) => {
+  const telegramId = ctx.from?.id;
+  if (telegramId) {
+    try {
+      const miembro = await verificarUsuarioActivo(telegramId);
+      if (miembro) {
+        ctx.miembro = miembro;
+        // Persist in session for future updates
+        ctx.session.miembro = miembro;
+      } else {
+        // DB returned null — use session as fallback (e.g. during DB hiccup or timing)
+        if (ctx.session?.miembro) {
+          ctx.miembro = ctx.session.miembro;
+        }
+      }
+    } catch (err) {
+      console.error('Error in global middleware verifying user:', err.message);
+      // On error, fall back to session so the user isn't locked out
+      if (ctx.session?.miembro) {
+        ctx.miembro = ctx.session.miembro;
+      }
+    }
+  }
+  return next();
+});
+
 // Plugin de conversaciones (formularios multi-paso)
 bot.use(conversations());
 
 // Registrar conversaciones
 bot.use(createConversation(conversacionRG, 'captura_rg'));
 bot.use(createConversation(conversacionRC, 'captura_rc'));
+bot.use(createConversation(conversacionRegistroRG, 'registro_rg'));
+bot.use(createConversation(conversacionRegistroRC, 'registro_rc'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMANDO /start — Verificación de teléfono
@@ -64,6 +95,13 @@ bot.command('start', async (ctx) => {
   );
 });
 
+// ── /salir — Mensaje de despedida (accesible sin autenticación)
+bot.command('salir', async (ctx) => {
+  // Si hay una conversación activa, cerrarla
+  if (ctx.conversation) await ctx.conversation.exit();
+  await ctx.reply('👋 ¡Hasta luego! Gracias por usar el bot. Si deseas volver, escribe /start.', { reply_markup: { remove_keyboard: true } });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MANEJO DE CONTACTO — Verificación
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +111,8 @@ bot.on('message:contact', async (ctx) => {
   const telegramId = ctx.from.id;
 
   // Telegram solo permite compartir el propio número (seguridad nativa)
-  if (contacto.user_id !== telegramId) {
+  // user_id puede venir undefined en algunos clientes o configuraciones de privacidad
+  if (contacto.user_id && String(contacto.user_id) !== String(telegramId)) {
     await ctx.reply(
       '⚠️ Solo puedes compartir *tu propio* número de teléfono.',
       { parse_mode: 'Markdown' }
@@ -99,6 +138,9 @@ bot.on('message:contact', async (ctx) => {
 
     // Vincular telegram_id
     await vincularTelegramId(usuario.id, telegramId);
+    // Attach member info to context and session
+    ctx.miembro = { ...usuario, telegram_id: telegramId, bot_activo: true };
+    ctx.session.miembro = ctx.miembro;
 
     await ctx.reply(
       `✅ *¡Verificado exitosamente!*\n\n` +
@@ -120,10 +162,34 @@ bot.on('message:contact', async (ctx) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MENSAJES DE TEXTO DE USUARIOS NO AUTENTICADOS
+// Captura mensajes de texto (ej. el usuario escribe su número en vez de
+// usar el botón) ANTES del middleware de auth, para dar un mensaje útil.
+// ─────────────────────────────────────────────────────────────────────────────
+
+bot.on('message:text', async (ctx, next) => {
+  // Si el texto es un comando (/start, /ayuda, etc.) dejarlo pasar
+  if (ctx.message.text.startsWith('/')) return next();
+
+  // Verificar si el usuario ya está autenticado
+  if (ctx.miembro) return next(); // Autenticado → continuar normalmente
+
+  // Usuario NO autenticado que escribió texto: guiarlo al botón
+  await ctx.reply(
+    '📱 Para acceder al sistema necesitas verificar tu identidad.\n\n' +
+    'Usa el botón de abajo para compartir tu número de teléfono automáticamente.\n\n' +
+    '_No escribas el número manualmente, usa el botón._',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: tecladoCompartirTelefono,
+    }
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMANDOS PROTEGIDOS (requieren auth)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Middleware de auth solo para rutas protegidas
 const protegido = bot.filter((ctx) => {
   // Permitir /start y contactos sin auth
   if (ctx.message?.text === '/start') return false;
@@ -184,16 +250,23 @@ protegido.command('cancelar', async (ctx) => {
   await ctx.reply('❌ Operación cancelada.', { reply_markup: menuPrincipal });
 });
 
+// ── /salir — Mensaje de despedida al cerrar la interacción
+protegido.command('salir', async (ctx) => {
+  // Limpiar cualquier conversación activa
+  if (ctx.conversation) await ctx.conversation.exit();
+  await ctx.reply('👋 ¡Hasta luego! Gracias por usar el bot. Si deseas volver, escribe /start.', { reply_markup: { remove_keyboard: true } });
+});
+
 // ── /ayuda ─────────────────────────────────────────────────────────────────
 protegido.command('ayuda', async (ctx) => {
   await ctx.reply(
     '📖 *Comandos disponibles*\n\n' +
-    '`/capturar` — Menú principal\n' +
-    '`/captura_general` — Registrar acción de RG\n' +
-    '`/captura_casilla` — Registrar acción de RC\n' +
-    '`/mis_capturas` — Ver mis últimas capturas\n' +
-    '`/cancelar` — Cancelar operación actual\n' +
-    '`/ayuda` — Ver esta ayuda\n\n' +
+    '`capturar` — Menú principal\n' +
+    '`captura_general` — Registrar acción de RG\n' +
+    '`captura_casilla` — Registrar acción de RC\n' +
+    '`mis_capturas` — Ver mis últimas capturas\n' +
+    '`cancelar` — Cancelar operación actual\n' +
+    '`ayuda` — Ver esta ayuda\n\n' +
     '💬 Ante cualquier problema contacta a tu coordinador.',
     { parse_mode: 'Markdown' }
   );
@@ -211,6 +284,16 @@ protegido.callbackQuery('menu_rg', async (ctx) => {
 protegido.callbackQuery('menu_rc', async (ctx) => {
   await ctx.answerCallbackQuery();
   await ctx.conversation.enter('captura_rc');
+});
+
+protegido.callbackQuery('menu_registro_rg', async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await ctx.conversation.enter('registro_rg');
+});
+
+protegido.callbackQuery('menu_registro_rc', async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await ctx.conversation.enter('registro_rc');
 });
 
 protegido.callbackQuery('menu_capturas', async (ctx) => {

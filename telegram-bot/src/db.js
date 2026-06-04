@@ -1,117 +1,143 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Lazy client initialization
+let _supabase = null;
 
-/**
- * Busca un usuario registrado por número de teléfono en la tabla `usuarios`.
- */
+function getClient() {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY;
+    if (!url || !key) {
+      throw new Error(`Supabase env vars not loaded. URL="${url}" KEY="${key ? '...' : 'undefined'}"`);
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
+
 export async function buscarUsuarioPorTelefono(telefono) {
-  // Normalizar: quitar el +52 o + que viene de Telegram
+  const supabase = getClient();
   const tel = telefono.replace(/^\+52/, '').replace(/^\+/, '');
-
+  // %2B for plus sign in postgrest URL params if needed, but here we strip it so we just check with %2B52
   const { data, error } = await supabase
     .from('usuarios')
     .select('id, usuario, nombre_completo, rol, telefono, bot_activo, telegram_id')
-    .or(`telefono.eq.${tel},telefono.eq.52${tel}`)
-    .eq('bot_activo', false) // Solo usuarios que aún no se han vinculado, o...
+    .or(`telefono.eq.${tel},telefono.eq.%2B52${tel}`)
+    .eq('bot_activo', false)
     .maybeSingle();
 
-  // Intentar también si ya está vinculado (por si se desvinculó el cuenta)
   if (!data) {
     const { data: data2, error: error2 } = await supabase
       .from('usuarios')
       .select('id, usuario, nombre_completo, rol, telefono, bot_activo, telegram_id')
-      .or(`telefono.eq.${tel},telefono.eq.52${tel}`)
+      .or(`telefono.eq.${tel},telefono.eq.%2B52${tel}`)
       .maybeSingle();
     if (error2) throw error2;
     return data2;
   }
-
   if (error) throw error;
   return data;
 }
 
-/**
- * Vincula el telegram_id al usuario y activa el bot.
- */
 export async function vincularTelegramId(usuarioId, telegramId) {
+  const supabase = getClient();
   const { error } = await supabase
     .from('usuarios')
     .update({ telegram_id: telegramId, bot_activo: true })
     .eq('id', usuarioId);
-
   if (error) throw error;
 }
 
-/**
- * Verifica si un telegram_id ya está vinculado y activo.
- */
 export async function verificarUsuarioActivo(telegramId) {
+  const supabase = getClient();
   const { data, error } = await supabase
     .from('usuarios')
     .select('id, usuario, nombre_completo, rol, bot_activo')
     .eq('telegram_id', telegramId)
     .eq('bot_activo', true)
     .maybeSingle();
-
   if (error) throw error;
   return data;
 }
 
-/**
- * Guarda una captura de Representante General (RG).
- */
-export async function guardarCapturaRG(datos) {
-  const { data, error } = await supabase
-    .from('capturas_rg')
-    .insert([datos])
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Guarda una captura de Representante de Casilla (RC).
- */
-export async function guardarCapturaRC(datos) {
-  const { data, error } = await supabase
-    .from('capturas_rc')
-    .insert([datos])
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Obtiene las últimas capturas de un usuario.
- */
-export async function obtenerMisCapturas(usuarioId) {
+export async function verificarClaveElectorExistente(clave) {
+  const supabase = getClient();
+  const claveNormalizada = clave.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+  
   const [rg, rc] = await Promise.all([
-    supabase
-      .from('capturas_rg')
-      .select('*')
-      .eq('usuario_id', usuarioId)
-      .order('created_at', { ascending: false })
-      .limit(5),
-    supabase
-      .from('capturas_rc')
-      .select('*')
-      .eq('usuario_id', usuarioId)
-      .order('created_at', { ascending: false })
-      .limit(5),
+    supabase.from('rg').select('id, nombre, apellido_paterno').ilike('clave_elector', claveNormalizada).maybeSingle(),
+    supabase.from('rc').select('id, nombre, apellido_paterno').ilike('clave_elector', claveNormalizada).maybeSingle()
   ]);
 
-  return {
-    rg: rg.data || [],
-    rc: rc.data || [],
-  };
+  if (rg.data) return { existe: true, tipo: 'RG', nombre: `${rg.data.nombre} ${rg.data.apellido_paterno}` };
+  if (rc.data) return { existe: true, tipo: 'RC', nombre: `${rc.data.nombre} ${rc.data.apellido_paterno}` };
+  
+  return { existe: false };
 }
 
-export default supabase;
+export async function getMunicipios() {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('municipios').select('id, nombre').order('id');
+  if (error) throw error;
+  return data;
+}
+
+export async function getDistritosFederales() {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('df').select('id, df').order('df');
+  if (error) throw error;
+  return data;
+}
+
+export async function getDistritosLocales() {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('dl').select('id, dl').order('dl');
+  if (error) throw error;
+  return data;
+}
+
+export async function getCasillasPorSeccion(seccionId) {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('casillas').select('casilla_id, casilla').like('casilla', `${seccionId}%`).order('casilla');
+  if (error) throw error;
+  return data;
+}
+
+export async function guardarNuevoRG(payload) {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('rg').insert([payload]).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function guardarNuevoRC(payload) {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('rc').insert([payload]).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function guardarCapturaRG(datos) {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('capturas_rg').insert([datos]).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function guardarCapturaRC(datos) {
+  const supabase = getClient();
+  const { data, error } = await supabase.from('capturas_rc').insert([datos]).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function obtenerMisCapturas(usuarioId) {
+  const supabase = getClient();
+  const [rg, rc] = await Promise.all([
+    supabase.from('capturas_rg').select('*').eq('usuario_id', usuarioId).order('created_at', { ascending: false }).limit(5),
+    supabase.from('capturas_rc').select('*').eq('usuario_id', usuarioId).order('created_at', { ascending: false }).limit(5),
+  ]);
+  return { rg: rg.data || [], rc: rc.data || [] };
+}
+
+export default getClient;

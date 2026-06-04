@@ -1,4 +1,4 @@
-import { guardarCapturaRG } from '../db.js';
+import { guardarCapturaRG, verificarUsuarioActivo } from '../db.js';
 import { tecladoTipoRG, tecladoCancelar } from '../teclados.js';
 
 /**
@@ -11,37 +11,33 @@ import { tecladoTipoRG, tecladoCancelar } from '../teclados.js';
  *   5. Confirmación y guardado
  */
 export async function conversacionRG(conversation, ctx) {
-  const miembro = ctx.miembro;
+  const telegramId = ctx.from?.id;
+  const miembro = ctx.miembro || await conversation.external(() => verificarUsuarioActivo(telegramId));
+  if (!miembro) {
+    return ctx.reply('⚠️ Sesión no válida. Usa /start para autenticarte.');
+  }
 
-  // ── PASO 1: Número de ruta ────────────────────────────────────────────
+  // ── PASO 1: Nombre del RG ─────────────────────────────────────────────
   await ctx.reply(
-    '📋 *Captura de Representante General*\n\n' +
-    '*Paso 1/4*: ¿Cuál es el número de ruta?\n\n' +
-    '_Escribe el número o /cancelar para salir_',
+    `*Paso 1/3*: ¿Cuál es el nombre completo del RG?`,
     { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
   );
 
-  const msgRuta = await conversation.waitFor('message:text');
-  if (msgRuta.message.text === '/cancelar') {
+  const res = await conversation.waitFor(['message:text', 'callback_query:data']);
+  
+  if (res.callbackQuery?.data === 'cancelar' || res.message?.text === '/cancelar') {
+    if (res.callbackQuery) await res.answerCallbackQuery();
     return ctx.reply('❌ Captura cancelada.');
   }
-  const ruta = msgRuta.message.text.trim();
+  
+  if (!res.message?.text) return ctx.reply('❌ Captura cancelada.');
+  
+  const nombreRG = res.message.text.trim();
+  const ruta = 'N/A'; // Ruta eliminada del flujo, asignamos valor por defecto
 
-  // ── PASO 2: Nombre del RG ─────────────────────────────────────────────
+  // ── PASO 2: Tipo de evento ────────────────────────────────────────────
   await ctx.reply(
-    `*Paso 2/4*: ¿Cuál es el nombre completo del RG para la ruta *${ruta}*?`,
-    { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
-  );
-
-  const msgNombre = await conversation.waitFor('message:text');
-  if (msgNombre.message.text === '/cancelar') {
-    return ctx.reply('❌ Captura cancelada.');
-  }
-  const nombreRG = msgNombre.message.text.trim();
-
-  // ── PASO 3: Tipo de evento ────────────────────────────────────────────
-  await ctx.reply(
-    `*Paso 3/4*: ¿Qué acción registras para *${nombreRG}*?`,
+    `*Paso 2/3*: ¿Qué acción registras para *${nombreRG}*?`,
     { parse_mode: 'Markdown', reply_markup: tecladoTipoRG }
   );
 
@@ -60,9 +56,9 @@ export async function conversacionRG(conversation, ctx) {
     return ctx.reply('❌ Captura cancelada.');
   }
 
-  // ── PASO 4: Notas opcionales ──────────────────────────────────────────
+  // ── PASO 3: Notas opcionales ──────────────────────────────────────────
   await ctx.reply(
-    '*Paso 4/4*: ¿Alguna nota o comentario? (escribe "ninguna" para omitir)',
+    '*Paso 3/3*: ¿Alguna nota o comentario? (escribe "ninguna" para omitir)',
     { parse_mode: 'Markdown' }
   );
 
@@ -75,7 +71,6 @@ export async function conversacionRG(conversation, ctx) {
   const ahora = new Date().toLocaleString('es-MX', { timeZone: 'America/Tijuana' });
   const resumen =
     `📋 *Resumen de captura RG*\n\n` +
-    `🔢 Ruta: *${ruta}*\n` +
     `👤 RG: *${nombreRG}*\n` +
     `🎯 Acción: *${tipoTexto}*\n` +
     `📝 Notas: ${notas || 'Ninguna'}\n` +

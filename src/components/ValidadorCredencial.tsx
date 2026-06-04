@@ -79,7 +79,8 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
         <div className="relative flex-1">
           <input 
             type="text" 
-            className="input-field pl-10 font-mono uppercase" 
+            className="input-field font-mono uppercase" 
+            style={{ paddingLeft: '2.75rem' }}
             placeholder="ABCD1234567890EFGH"
             maxLength={18}
             value={credencialValidacion}

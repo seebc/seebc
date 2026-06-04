@@ -1,4 +1,4 @@
-import { guardarCapturaRC } from '../db.js';
+import { guardarCapturaRC, verificarUsuarioActivo } from '../db.js';
 import { tecladoTipoRC, tecladoCancelar } from '../teclados.js';
 
 /**
@@ -12,7 +12,11 @@ import { tecladoTipoRC, tecladoCancelar } from '../teclados.js';
  *   6. Confirmación y guardado
  */
 export async function conversacionRC(conversation, ctx) {
-  const miembro = ctx.miembro;
+  const telegramId = ctx.from?.id;
+  const miembro = ctx.miembro || await conversation.external(() => verificarUsuarioActivo(telegramId));
+  if (!miembro) {
+    return ctx.reply('⚠️ Sesión no válida. Usa /start para autenticarte.');
+  }
 
   // ── PASO 1: Sección ───────────────────────────────────────────────────
   await ctx.reply(
@@ -22,11 +26,13 @@ export async function conversacionRC(conversation, ctx) {
     { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
   );
 
-  const msgSeccion = await conversation.waitFor('message:text');
-  if (msgSeccion.message.text === '/cancelar') {
+  const resSeccion = await conversation.waitFor(['message:text', 'callback_query:data']);
+  if (resSeccion.callbackQuery?.data === 'cancelar' || resSeccion.message?.text === '/cancelar') {
+    if (resSeccion.callbackQuery) await resSeccion.answerCallbackQuery();
     return ctx.reply('❌ Captura cancelada.');
   }
-  const seccion = msgSeccion.message.text.trim();
+  if (!resSeccion.message?.text) return ctx.reply('❌ Captura cancelada.');
+  const seccion = resSeccion.message.text.trim();
 
   // ── PASO 2: Número de casilla ─────────────────────────────────────────
   await ctx.reply(
@@ -35,11 +41,13 @@ export async function conversacionRC(conversation, ctx) {
     { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
   );
 
-  const msgCasilla = await conversation.waitFor('message:text');
-  if (msgCasilla.message.text === '/cancelar') {
+  const resCasilla = await conversation.waitFor(['message:text', 'callback_query:data']);
+  if (resCasilla.callbackQuery?.data === 'cancelar' || resCasilla.message?.text === '/cancelar') {
+    if (resCasilla.callbackQuery) await resCasilla.answerCallbackQuery();
     return ctx.reply('❌ Captura cancelada.');
   }
-  const casilla = msgCasilla.message.text.trim();
+  if (!resCasilla.message?.text) return ctx.reply('❌ Captura cancelada.');
+  const casilla = resCasilla.message.text.trim();
 
   // ── PASO 3: Nombre del RC ─────────────────────────────────────────────
   await ctx.reply(
@@ -47,11 +55,13 @@ export async function conversacionRC(conversation, ctx) {
     { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
   );
 
-  const msgNombre = await conversation.waitFor('message:text');
-  if (msgNombre.message.text === '/cancelar') {
+  const resNombre = await conversation.waitFor(['message:text', 'callback_query:data']);
+  if (resNombre.callbackQuery?.data === 'cancelar' || resNombre.message?.text === '/cancelar') {
+    if (resNombre.callbackQuery) await resNombre.answerCallbackQuery();
     return ctx.reply('❌ Captura cancelada.');
   }
-  const nombreRC = msgNombre.message.text.trim();
+  if (!resNombre.message?.text) return ctx.reply('❌ Captura cancelada.');
+  const nombreRC = resNombre.message.text.trim();
 
   // ── PASO 4: Tipo de evento ────────────────────────────────────────────
   await ctx.reply(

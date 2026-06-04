@@ -6,19 +6,8 @@ import { verificarUsuarioActivo } from './db.js';
  * Si no está autenticado, le indica que ejecute /start para registrarse.
  */
 export async function authMiddleware(ctx, next) {
-  const telegramId = ctx.from?.id;
-  if (!telegramId) return;
-
-  try {
-    const miembro = await verificarUsuarioActivo(telegramId);
-
-    if (miembro) {
-      // Inyectar datos del miembro en el contexto para uso en handlers
-      ctx.miembro = miembro;
-      return next();
-    }
-  } catch (err) {
-    console.error('Error en authMiddleware:', err.message);
+  if (ctx.miembro) {
+    return next();
   }
 
   // Usuario no autenticado

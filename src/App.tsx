@@ -707,7 +707,6 @@ export default function App() {
     }
 
     try {
-      // Nueva función robusta para evitar problemas de cache de PostgREST
       const { error } = await supabase.rpc('manage_user_secure', {
         in_id: editingUserId ?? 0,
         in_usuario: userForm.usuario.toLowerCase().trim(),
