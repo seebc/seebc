@@ -251,11 +251,7 @@ protegido.command('cancelar', async (ctx) => {
 });
 
 // ── /salir — Mensaje de despedida al cerrar la interacción
-protegido.command('salir', async (ctx) => {
-  // Limpiar cualquier conversación activa
-  if (ctx.conversation) await ctx.conversation.exit();
-  await ctx.reply('👋 ¡Hasta luego! Gracias por usar el bot. Si deseas volver, escribe /start.', { reply_markup: { remove_keyboard: true } });
-});
+// Duplicate protected /salir command removed to avoid conflict. The unprotected /salir defined earlier handles exit for all users.
 
 // ── /ayuda ─────────────────────────────────────────────────────────────────
 protegido.command('ayuda', async (ctx) => {
@@ -336,6 +332,7 @@ bot.catch((err) => {
 
 bot.start({
   onStart: (botInfo) => {
+    console.log(`Bot ${botInfo.username} está polling…`);
     console.log(`
 ╔══════════════════════════════════════╗
 ║   🤖 SEEBC Bot iniciado              ║

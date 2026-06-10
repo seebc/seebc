@@ -98,7 +98,12 @@ export async function getDistritosLocales() {
 
 export async function getCasillasPorSeccion(seccionId) {
   const supabase = getClient();
-  const { data, error } = await supabase.from('casillas').select('casilla_id, casilla').like('casilla', `${seccionId}%`).order('casilla');
+  const { data, error } = await supabase
+    .from('casillas')
+    .select('casilla_id, casilla, ocupado')
+    .eq('ocupado', false)
+    .like('casilla', `${seccionId}%`)
+    .order('casilla');
   if (error) throw error;
   return data;
 }
@@ -107,6 +112,10 @@ export async function guardarNuevoRG(payload) {
   const supabase = getClient();
   const { data, error } = await supabase.from('rg').insert([payload]).select().single();
   if (error) throw error;
+  // Mark the RG name as occupied to prevent reuse
+  if (data && data.id) {
+    await setRGNombreOcupado(data.id, true);
+  }
   return data;
 }
 
@@ -114,7 +123,36 @@ export async function guardarNuevoRC(payload) {
   const supabase = getClient();
   const { data, error } = await supabase.from('rc').insert([payload]).select().single();
   if (error) throw error;
+  // Mark the RC name as occupied (if needed)
+  if (data && data.id) {
+    await setRCNombreOcupado(data.id, true);
+  }
+  // Mark the assigned casilla as occupied
+  if (payload.casilla_id) {
+    await setCasillaOcupada(payload.casilla_id, true);
+  }
   return data;
+}
+
+// Helper to set RG name occupancy
+export async function setRGNombreOcupado(rgId, ocupado) {
+  const supabase = getClient();
+  const { error } = await supabase.from('rg').update({ ocupado }).eq('id', rgId);
+  if (error) throw error;
+}
+
+// Helper to set RC name occupancy
+export async function setRCNombreOcupado(rcId, ocupado) {
+  const supabase = getClient();
+  const { error } = await supabase.from('rc').update({ ocupado }).eq('id', rcId);
+  if (error) throw error;
+}
+
+// Helper to set casilla occupancy
+export async function setCasillaOcupada(casillaId, ocupado) {
+  const supabase = getClient();
+  const { error } = await supabase.from('casillas').update({ ocupado }).eq('casilla_id', casillaId);
+  if (error) throw error;
 }
 
 export async function guardarCapturaRG(datos) {

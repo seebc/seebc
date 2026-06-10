@@ -158,6 +158,19 @@ export async function conversacionRegistroRG(conversation, ctx) {
 
     await guardarNuevoRG(payload);
     await ctx.reply('✅ *Representante General registrado correctamente.*', { parse_mode: 'Markdown' });
+    // Offer next action
+    const postKeyboard = new InlineKeyboard()
+      .text('📄 Iniciar otra captura', 'nuevo_rg')
+      .text('🚪 Salir', 'salir_rg');
+    await ctx.reply('¿Qué deseas hacer ahora?', { reply_markup: postKeyboard });
+    const postCb = await conversation.waitFor('callback_query:data');
+    await postCb.answerCallbackQuery();
+    if (postCb.callbackQuery.data === 'nuevo_rg') {
+      // Restart the registration flow by calling the function recursively
+      return await conversacionRegistroRG(conversation, ctx);
+    }
+    // If 'salir_rg' or any other, simply end.
+    return;
 
   } catch (err) {
     if (err.message === 'CANCELADO') {
