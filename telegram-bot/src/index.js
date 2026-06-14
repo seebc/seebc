@@ -69,30 +69,36 @@ bot.use(createConversation(conversacionRegistroRC, 'registro_rc'));
 // ─────────────────────────────────────────────────────────────────────────────
 
 bot.command('start', async (ctx) => {
-  const telegramId = ctx.from.id;
+  try {
+    console.log('Received /start from', ctx.from?.username || ctx.from?.id);
+    const telegramId = ctx.from.id;
 
-  // ¿Ya está registrado?
-  const miembro = await verificarUsuarioActivo(telegramId);
-  if (miembro) {
-    await ctx.reply(
-      `¡Bienvenido de vuelta, *${miembro.nombre_completo || miembro.usuario}*! 👋\n\n` +
-      '¿Qué deseas hacer?',
-      { parse_mode: 'Markdown', reply_markup: menuPrincipal }
-    );
-    return;
-  }
-
-  // Primera vez: pedir número de teléfono
-  await ctx.reply(
-    '👋 *Bienvenido al sistema SEEBC*\n\n' +
-    'Este bot es exclusivo para representantes registrados.\n\n' +
-    '📱 Para verificar tu identidad, presiona el botón de abajo para compartir tu número de teléfono.\n\n' +
-    '_Tu número se comparará con la base de datos de miembros registrados._',
-    {
-      parse_mode: 'Markdown',
-      reply_markup: tecladoCompartirTelefono,
+    // ¿Ya está registrado?
+    const miembro = await verificarUsuarioActivo(telegramId);
+    if (miembro) {
+      await ctx.reply(
+        `¡Bienvenido de vuelta, *${miembro.nombre_completo || miembro.usuario}*! 👋\n\n` +
+          '¿Qué deseas hacer?',
+        { parse_mode: 'Markdown', reply_markup: menuPrincipal }
+      );
+      return;
     }
-  );
+
+    // Primera vez: pedir número de teléfono
+    await ctx.reply(
+      '👋 *Bienvenido al sistema SEEBC*\n\n' +
+        'Este bot es exclusivo para representantes registrados.\n\n' +
+        '📱 Para verificar tu identidad, presiona el botón de abajo para compartir tu número de teléfono.\n\n' +
+        '_Tu número se comparará con la base de datos de miembros registrados._',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: tecladoCompartirTelefono,
+      }
+    );
+  } catch (err) {
+    console.error('Error in /start handler:', err);
+    await ctx.reply('⚠️ Ocurrió un error interno. Por favor, intenta más tarde.');
+  }
 });
 
 // ── /salir — Mensaje de despedida (accesible sin autenticación)
@@ -330,7 +336,8 @@ bot.catch((err) => {
 // ARRANQUE
 // ─────────────────────────────────────────────────────────────────────────────
 
-bot.start({
+process.once('SIGINT', () => bot.stop());
+process.once('SIGTERM', () => bot.stop());
   onStart: (botInfo) => {
     console.log(`Bot ${botInfo.username} está polling…`);
     console.log(`

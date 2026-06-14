@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  seebc-bot:
+    build: ./telegram-bot
+    container_name: seebc-bot
+    env_file:
+      - ./telegram-bot/.env
+    restart: unless-stopped
+    # Uncomment if you expose a webhook endpoint
+    # ports:
+    #   - "3000:3000"

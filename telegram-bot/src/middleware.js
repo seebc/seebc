@@ -6,6 +6,11 @@ import { verificarUsuarioActivo } from './db.js';
  * Si no está autenticado, le indica que ejecute /start para registrarse.
  */
 export async function authMiddleware(ctx, next) {
+  // Allow unauthenticated users to access the /start command (and contact messages)
+  if (ctx.message?.text && ctx.message.text.startsWith('/start')) {
+    return next();
+  }
+
   if (ctx.miembro) {
     return next();
   }
