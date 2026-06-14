@@ -117,6 +117,12 @@ export default function App() {
   const [representantesGenerales, setRepresentantesGenerales] = useState<RepresentanteGeneral[]>([]);
   const [representantesCasilla, setRepresentantesCasilla] = useState<RepresentanteCasilla[]>([]);
   const [rutas, setRutas] = useState<Ruta[]>([]);
+  // Compute set of casilla IDs already assigned to other rutas (exclude current editing)
+  const assignedCasillaIds = new Set(
+    rutas
+      .filter(r => r.id !== editingRutaId)
+      .flatMap(r => (r.casillas_asignada ? (r.casillas_asignada as number[]) : []))
+  );
   const [usuarios, setUsuarios] = useState<UsuarioManual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -2030,6 +2036,9 @@ export default function App() {
                               const selectedDl = distritosLocales.find(d => String(d.id) === String(rutaForm.dl_id));
                               if (selectedDl && c.dl !== selectedDl.dl) return false;
                             }
+                            
+                            // Exclude casillas already assigned to another ruta
+                            if (assignedCasillaIds.has(c.casilla_id)) return false;
                             
                             if (casillaSearch.trim()) {
                               const search = casillaSearch.toLowerCase();

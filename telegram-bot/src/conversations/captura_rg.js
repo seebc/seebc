@@ -17,9 +17,22 @@ export async function conversacionRG(conversation, ctx) {
     return ctx.reply('⚠️ Sesión no válida. Usa /start para autenticarte.');
   }
 
-  // ── PASO 1: Nombre del RG ─────────────────────────────────────────────
+  // ── PASO 1: Número de ruta ────────────────────────────────────────
   await ctx.reply(
-    `*Paso 1/3*: ¿Cuál es el nombre completo del RG?`,
+    `*Paso 1/4*: ¿Cuál es el número de ruta?`,
+    { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
+  );
+  const resRuta = await conversation.waitFor(['message:text', 'callback_query:data']);
+  if (resRuta.callbackQuery?.data === 'cancelar' || resRuta.message?.text === '/cancelar') {
+    if (resRuta.callbackQuery) await resRuta.answerCallbackQuery();
+    return ctx.reply('❌ Captura cancelada.');
+  }
+  if (!resRuta.message?.text) return ctx.reply('❌ Captura cancelada.');
+  const ruta = resRuta.message.text.trim();
+
+  // ── PASO 2: Nombre del RG ─────────────────────────────────────────────
+  await ctx.reply(
+    `*Paso 2/4*: ¿Cuál es el nombre completo del RG?`,
     { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
   );
 
@@ -33,11 +46,10 @@ export async function conversacionRG(conversation, ctx) {
   if (!res.message?.text) return ctx.reply('❌ Captura cancelada.');
   
   const nombreRG = res.message.text.trim();
-  const ruta = 'N/A'; // Ruta eliminada del flujo, asignamos valor por defecto
 
-  // ── PASO 2: Tipo de evento ────────────────────────────────────────────
+  // ── PASO 3: Tipo de evento ────────────────────────────────────────
   await ctx.reply(
-    `*Paso 2/3*: ¿Qué acción registras para *${nombreRG}*?`,
+    `*Paso 3/4*: ¿Qué acción registras para *${nombreRG}*?`,
     { parse_mode: 'Markdown', reply_markup: tecladoTipoRG }
   );
 
@@ -56,9 +68,9 @@ export async function conversacionRG(conversation, ctx) {
     return ctx.reply('❌ Captura cancelada.');
   }
 
-  // ── PASO 3: Notas opcionales ──────────────────────────────────────────
+  // ── PASO 4: Notas opcionales ──────────────────────────────────────
   await ctx.reply(
-    '*Paso 3/3*: ¿Alguna nota o comentario? (escribe "ninguna" para omitir)',
+    '*Paso 4/4*: ¿Alguna nota o comentario? (escribe "ninguna" para omitir)',
     { parse_mode: 'Markdown' }
   );
 
