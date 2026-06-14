@@ -105,7 +105,7 @@ bot.command('start', async (ctx) => {
 bot.command('salir', async (ctx) => {
   // Si hay una conversación activa, cerrarla
   if (ctx.conversation) await ctx.conversation.exit();
-  await ctx.reply('👋 ¡Hasta luego! Gracias por usar el bot. Si deseas volver, escribe /start.', { reply_markup: { remove_keyboard: true } });
+  await ctx.reply('👋 ¡Hasta luego! Gracias por su participación. Si deseas volver, escribe /start.', { reply_markup: { remove_keyboard: true } });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -338,6 +338,8 @@ bot.catch((err) => {
 
 process.once('SIGINT', () => bot.stop());
 process.once('SIGTERM', () => bot.stop());
+
+bot.start({
   onStart: (botInfo) => {
     console.log(`Bot ${botInfo.username} está polling…`);
     console.log(`
