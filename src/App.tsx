@@ -2100,38 +2100,83 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {rutas.map(ruta => {
-                    const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
-                    return (
-                      <div key={ruta.id} className="card p-5 hover-lift">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="w-10 h-10 bg-surface-100 rounded-lg flex items-center justify-center">
-                            <Route className="w-5 h-5 text-surface-500" />
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => handleEditRuta(ruta)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDeleteRuta(ruta.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        </div>
-                        <h4 className="font-bold text-surface-900 uppercase">{ruta.nombre_ruta}</h4>
-                        <div className="space-y-1 mt-2">
-                          <p className="text-xs text-surface-500 flex justify-between">
-                            <span>RG:</span> 
-                            <span className="font-medium text-surface-700">{rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'Sin asignar'}</span>
-                          </p>
-                          <p className="text-xs text-surface-500 flex justify-between">
-                            <span>Municipio:</span> 
-                            <span className="font-medium text-surface-700">{municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}</span>
-                          </p>
-                          <p className="text-xs text-surface-500 flex justify-between">
-                            <span>Casillas:</span> 
-                            <span className="font-medium text-surface-700">{(ruta.casillas_asignada as any[])?.length || 0}</span>
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="table-wrapper overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ruta</th>
+                        <th>RG Responsable</th>
+                        <th>Municipio</th>
+                        <th>Casillas</th>
+                        <th className="text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rutas.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-8 text-surface-500">
+                            No hay rutas registradas.
+                          </td>
+                        </tr>
+                      ) : (
+                        rutas.map(ruta => {
+                          const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                          return (
+                            <tr key={ruta.id}>
+                              <td className="font-bold text-surface-900 uppercase">
+                                <div className="flex items-center gap-2">
+                                  <Route className="w-4 h-4 text-surface-400" />
+                                  {ruta.nombre_ruta}
+                                </div>
+                              </td>
+                              <td className="uppercase">
+                                {rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : <span className="text-surface-400 italic normal-case">Sin asignar</span>}
+                              </td>
+                              <td className="uppercase">
+                                {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
+                              </td>
+                              <td>
+                                <div className="flex flex-col gap-1">
+                                  <div>
+                                    <span className="badge badge-neutral">
+                                      {(ruta.casillas_asignada as any[])?.length || 0}
+                                    </span>
+                                  </div>
+                                  {(() => {
+                                    const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
+                                    if (casillaIds.length === 0) return null;
+                                    const casillasDeRuta = casillas
+                                      .filter(c => casillaIds.includes(String(c.casilla_id)))
+                                      .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
+                                    
+                                    return (
+                                      <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
+                                        {casillasDeRuta.map(c => (
+                                          <span key={c.id} className="text-[10px] bg-surface-100 text-surface-600 px-1.5 py-0.5 rounded border border-surface-200 uppercase font-medium">
+                                            {c.casilla}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </td>
+                              <td className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <button onClick={() => handleEditRuta(ruta)} className="btn-icon" title="Editar">
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => handleDeleteRuta(ruta.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
