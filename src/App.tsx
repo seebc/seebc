@@ -1397,7 +1397,7 @@ export default function App() {
                           <input type="text" className="input-field uppercase" value={rgForm.num_ext} onChange={e => setRgForm({...rgForm, num_ext: e.target.value.toUpperCase()})} />
                         </div>
                         <div>
-                          <label className="input-label">Núm. Interior</label>
+                          <label className="input-label">Núm. Interior <span className="normal-case font-normal text-surface-400">(Opcional)</span></label>
                           <input type="text" className="input-field uppercase" value={rgForm.num_int} onChange={e => setRgForm({...rgForm, num_int: e.target.value.toUpperCase()})} />
                         </div>
                       </div>
@@ -1583,7 +1583,7 @@ export default function App() {
                           <input type="text" className="input-field uppercase" value={rcForm.num_ext} onChange={e => setRcForm({...rcForm, num_ext: e.target.value.toUpperCase()})} />
                         </div>
                         <div>
-                          <label className="input-label">Núm. Interior</label>
+                          <label className="input-label">Núm. Interior <span className="normal-case font-normal text-surface-400">(Opcional)</span></label>
                           <input type="text" className="input-field uppercase" value={rcForm.num_int} onChange={e => setRcForm({...rcForm, num_int: e.target.value.toUpperCase()})} />
                         </div>
                       </div>
