@@ -2137,26 +2137,29 @@ export default function App() {
                               </td>
                               <td>
                                 <div className="flex flex-col gap-1">
-                                  <div>
-                                    <span className="badge badge-neutral">
-                                      {(ruta.casillas_asignada as any[])?.length || 0}
-                                    </span>
-                                  </div>
                                   {(() => {
                                     const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
-                                    if (casillaIds.length === 0) return null;
                                     const casillasDeRuta = casillas
                                       .filter(c => casillaIds.includes(String(c.casilla_id)))
                                       .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
                                     
                                     return (
-                                      <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
-                                        {casillasDeRuta.map(c => (
-                                          <span key={c.id} className="text-[10px] bg-surface-100 text-surface-600 px-1.5 py-0.5 rounded border border-surface-200 uppercase font-medium">
-                                            {c.casilla}
+                                      <>
+                                        <div>
+                                          <span className="badge badge-neutral">
+                                            {casillasDeRuta.length}
                                           </span>
-                                        ))}
-                                      </div>
+                                        </div>
+                                        {casillasDeRuta.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
+                                            {casillasDeRuta.map(c => (
+                                              <span key={c.id} className="text-[10px] bg-surface-100 text-surface-600 px-1.5 py-0.5 rounded border border-surface-200 uppercase font-medium">
+                                                {c.casilla}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </>
                                     );
                                   })()}
                                 </div>
