@@ -117,12 +117,7 @@ export default function App() {
   const [representantesGenerales, setRepresentantesGenerales] = useState<RepresentanteGeneral[]>([]);
   const [representantesCasilla, setRepresentantesCasilla] = useState<RepresentanteCasilla[]>([]);
   const [rutas, setRutas] = useState<Ruta[]>([]);
-  // Compute set of casilla IDs already assigned to other rutas (exclude current editing)
-  const assignedCasillaIds = new Set(
-    rutas
-      .filter(r => r.id !== editingRutaId)
-      .flatMap(r => (r.casillas_asignada ? (r.casillas_asignada as number[]) : []))
-  );
+
   const [usuarios, setUsuarios] = useState<UsuarioManual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -199,6 +194,13 @@ export default function App() {
   const [editingCasillaIntId, setEditingCasillaIntId] = useState<number | null>(null); // For updates we track the real DB "casilla_id" which acts as Primary Key here, though typically its an int.
   const [rgValidado, setRgValidado] = useState(false);
   const [rcValidado, setRcValidado] = useState(false);
+
+  // Compute set of casilla IDs already assigned to other rutas (exclude current editing)
+  const assignedCasillaIds = new Set(
+    rutas
+      .filter(r => r.id !== editingRutaId)
+      .flatMap(r => (r.casillas_asignada ? (r.casillas_asignada as number[]) : []))
+  );
 
   // --- Lógica de Auth ---
   useEffect(() => {
