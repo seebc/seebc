@@ -17,25 +17,35 @@ function getClient() {
 
 export async function buscarUsuarioPorTelefono(telefono) {
   const supabase = getClient();
-  const tel = telefono.replace(/^\+52/, '').replace(/^\+/, '');
-  // %2B for plus sign in postgrest URL params if needed, but here we strip it so we just check with %2B52
+
+  // Telegram envía números en diferentes formatos:
+  //   +521234567890  (más común — con + y código de país)
+  //   521234567890   (sin +)
+  //   1234567890     (solo 10 dígitos, raro)
+  // Normalizamos a los 10 dígitos locales eliminando el prefijo 52 con o sin +
+  const tel = String(telefono)
+    .replace(/^\+52/, '')   // quita +52
+    .replace(/^52/, '')     // quita 52 sin +
+    .replace(/^\+/, '');    // quita cualquier + restante
+
+  console.log(`[buscarUsuarioPorTelefono] raw="${telefono}" → normalizado="${tel}"`);
+
+  // Buscamos en todos los formatos posibles que pueda estar guardado en la BD:
+  //   1234567890        (solo 10 dígitos)
+  //   521234567890      (con 52 sin +)
+  //   +521234567890     (con +52)
   const { data, error } = await supabase
     .from('usuarios')
     .select('id, usuario, nombre_completo, rol, telefono, bot_activo, telegram_id')
-    .or(`telefono.eq.${tel},telefono.eq.%2B52${tel}`)
-    .eq('bot_activo', false)
+    .or(`telefono.eq.${tel},telefono.eq.52${tel},telefono.eq.+52${tel}`)
     .maybeSingle();
 
-  if (!data) {
-    const { data: data2, error: error2 } = await supabase
-      .from('usuarios')
-      .select('id, usuario, nombre_completo, rol, telefono, bot_activo, telegram_id')
-      .or(`telefono.eq.${tel},telefono.eq.%2B52${tel}`)
-      .maybeSingle();
-    if (error2) throw error2;
-    return data2;
-  }
   if (error) throw error;
+
+  if (!data) {
+    console.warn(`[buscarUsuarioPorTelefono] No encontrado para tel="${tel}"`);
+  }
+
   return data;
 }
 
