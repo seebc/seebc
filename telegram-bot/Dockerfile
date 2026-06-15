@@ -1,32 +1,25 @@
-## Dockerfile
-# ---- Builder stage -------------------------------------------------
-FROM node:20-alpine AS builder
+# Dockerfile — telegram-bot
+# Render usa telegram-bot/ como contexto de build (directorio del Dockerfile)
+# Por eso los paths son relativos a telegram-bot/, no a la raíz del repo
 
-# Install git (optional, for private deps)
-RUN apk add --no-cache git
-
-WORKDIR /app
-
-# Install only production dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-# Copy source code
-COPY telegram-bot ./telegram-bot
-WORKDIR /app/telegram-bot
-
-# ---- Runtime stage -------------------------------------------------
 FROM node:20-alpine
 
-# Create non‑root user
+# Crear usuario no-root
 RUN addgroup -S bot && adduser -S bot -G bot
+
 WORKDIR /app
 
-# Copy built assets from builder
-COPY --from=builder /app/telegram-bot ./
+# Copiar dependencias (relativo al contexto = telegram-bot/)
+COPY package.json package-lock.json ./
 
-# Switch to non‑root user
+# Instalar solo dependencias de producción
+RUN npm ci --omit=dev
+
+# Copiar código fuente
+COPY src ./src
+
+# Cambiar a usuario no-root
 USER bot
 
-# Default command (uses scripts.start in package.json)
-CMD ["npm", "start"]
+# Arrancar el bot
+CMD ["node", "src/index.js"]
