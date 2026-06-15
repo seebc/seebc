@@ -2015,7 +2015,7 @@ export default function App() {
                       <input
                         type="text"
                         placeholder="Buscar casilla por nombre..."
-                        className="input-field pl-10"
+                        className="input-field pl-12"
                         value={casillaSearch}
                         onChange={(e) => setCasillaSearch(e.target.value)}
                       />

@@ -1,4 +1,4 @@
-import { guardarCapturaRC, verificarUsuarioActivo } from '../db.js';
+import { guardarCapturaRC, verificarUsuarioActivo, getCasillasPorSeccion } from '../db.js';
 import { tecladoTipoRC, tecladoCancelar } from '../teclados.js';
 
 /**
@@ -34,20 +34,33 @@ export async function conversacionRC(conversation, ctx) {
   if (!resSeccion.message?.text) return ctx.reply('❌ Captura cancelada.');
   const seccion = resSeccion.message.text.trim();
 
-  // ── PASO 2: Número de casilla ─────────────────────────────────────────
-  await ctx.reply(
-    `*Paso 2/5*: ¿Cuál es el número de casilla en la sección *${seccion}*?\n\n` +
-    `_Ejemplo: 01, 02, 1C (contigua), 1E (especial)_`,
-    { parse_mode: 'Markdown', reply_markup: tecladoCancelar }
-  );
+  // ── PASO 2: Selección de casilla disponible ───────────────────────────────
+    // Obtener casillas libres para la sección seleccionada
+    const casillasLibres = await getCasillasPorSeccion(seccion);
+    if (!casillasLibres || casillasLibres.length === 0) {
+      return ctx.reply('⚠️ No hay casillas disponibles en esa sección.', { reply_markup: tecladoCancelar });
+    }
+    // Construir teclado inline con las casillas libres
+    const { InlineKeyboard } = await import('grammy');
+    const tecladoCasillas = new InlineKeyboard();
+    casillasLibres.forEach((c) => {
+      // Usamos el id como callback data para identificar la casilla
+      tecladoCasillas.text(c.casilla, String(c.casilla_id)).row();
+    });
+    await ctx.reply(
+      `*Paso 2/5*: Selecciona la casilla disponible en la sección *${seccion}*:`,
+      { parse_mode: 'Markdown', reply_markup: tecladoCasillas }
+    );
 
-  const resCasilla = await conversation.waitFor(['message:text', 'callback_query:data']);
-  if (resCasilla.callbackQuery?.data === 'cancelar' || resCasilla.message?.text === '/cancelar') {
-    if (resCasilla.callbackQuery) await resCasilla.answerCallbackQuery();
-    return ctx.reply('❌ Captura cancelada.');
-  }
-  if (!resCasilla.message?.text) return ctx.reply('❌ Captura cancelada.');
-  const casilla = resCasilla.message.text.trim();
+  const cbCasilla = await conversation.waitFor('callback_query:data');
+    await cbCasilla.answerCallbackQuery();
+    const casillaId = Number(cbCasilla.callbackQuery.data);
+    // Buscar la casilla seleccionada en el listado previo
+    const casillaObj = casillasLibres.find((c) => c.casilla_id === casillaId);
+    if (!casillaObj) {
+      return ctx.reply('⚠️ Casilla no válida o ya ocupada.');
+    }
+    const casilla = casillaObj.casilla; // el número o nombre de la casilla
 
   // ── PASO 3: Nombre del RC ─────────────────────────────────────────────
   await ctx.reply(
