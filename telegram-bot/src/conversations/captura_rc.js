@@ -41,7 +41,7 @@ export async function conversacionRC(conversation, ctx) {
       return ctx.reply('⚠️ No hay casillas disponibles en esa sección.', { reply_markup: tecladoCancelar });
     }
     // Construir teclado inline con las casillas libres
-    const { InlineKeyboard } = await import('grammy');
+    const { InlineKeyboard } = await import('grammy'); // única declaración
     const tecladoCasillas = new InlineKeyboard();
     casillasLibres.forEach((c) => {
       // Usamos el id como callback data para identificar la casilla
@@ -97,7 +97,6 @@ export async function conversacionRC(conversation, ctx) {
   }
 
   // ── PASO 5: Foto de evidencia (opcional) ──────────────────────────────
-  const { InlineKeyboard } = await import('grammy');
   const tecladoFoto = new InlineKeyboard()
     .text('📷 Enviar foto', 'foto_si')
     .text('⏭️ Omitir', 'foto_no');
