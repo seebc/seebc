@@ -1,6 +1,7 @@
 import {
   guardarNuevoRC,
   getCasillasPorSeccion,
+  getMunicipios,
   verificarClaveElectorExistente,
   verificarUsuarioActivo
 } from '../db.js';
@@ -87,9 +88,19 @@ export async function conversacionRegistroRC(conversation, ctx) {
     const apellido_materno = await pedirTexto(ctx, conversation, '4. *Apellido Materno*:', false);
     const telefono = await pedirTexto(ctx, conversation, '5. *Teléfono* (10 dígitos):');
     const correo_electronico = (await pedirTexto(ctx, conversation, '6. *Correo Electrónico*:', true)).toLowerCase();
+    const numero_credencial = await pedirTexto(ctx, conversation, '7. *Número de Credencial (OCR)* (Reverso de la INE):', true);
+    const cic = await pedirTexto(ctx, conversation, '8. *CIC* (Identificador Ciudadano de 9 dígitos):', true);
 
     // 2. Ubicación Electoral
-    const dfInput = await pedirTexto(ctx, conversation, '7. *Distrito Federal (DF)* (ej. 1, 2, 7):');
+    const municipios = await conversation.external(() => getMunicipios());
+    const tecladoMuns = new InlineKeyboard();
+    municipios.forEach(m => tecladoMuns.text(m.nombre || m.municipio || `Municipio ${m.id}`, String(m.id)).row());
+    await ctx.reply('9. ¿A qué *Municipio* pertenece?', { parse_mode: 'Markdown', reply_markup: tecladoMuns });
+    const cbMun = await conversation.waitFor('callback_query:data');
+    await cbMun.answerCallbackQuery();
+    const municipio_id = parseInt(cbMun.callbackQuery.data);
+
+    const dfInput = await pedirTexto(ctx, conversation, '10. *Distrito Federal (DF)* (ej. 1, 2, 7):');
     const df_id = parseInt(dfInput) || 0;
     
     const dlInput = await pedirTexto(ctx, conversation, '8. *Distrito Local (DL)* (ej. 1, 2, 3...):');
@@ -127,24 +138,26 @@ export async function conversacionRegistroRC(conversation, ctx) {
     const tipo_nombramiento = cbRol.callbackQuery.data;
 
     // 3. Domicilio
-    const calle = await pedirTexto(ctx, conversation, '11. *Calle*:');
-    const num_ext = await pedirTexto(ctx, conversation, '12. *Número Exterior*:');
-    const num_int = await pedirTexto(ctx, conversation, '13. *Número Interior*:', true);
-    const colonia = await pedirTexto(ctx, conversation, '14. *Colonia*:');
-    const codigo_postal = await pedirTexto(ctx, conversation, '15. *Código Postal*:');
+    const calle = await pedirTexto(ctx, conversation, '14. *Calle*:');
+    const num_ext = await pedirTexto(ctx, conversation, '15. *Número Exterior*:');
+    const num_int = await pedirTexto(ctx, conversation, '16. *Número Interior*:', true);
+    const colonia = await pedirTexto(ctx, conversation, '17. *Colonia*:');
+    const codigo_postal = await pedirTexto(ctx, conversation, '18. *Código Postal*:');
 
     // 4. Preguntas Booleanas
-    const credencial_vigente = await pedirBooleano(ctx, conversation, '16. ¿La credencial está *vigente*?');
-    const es_militante = await pedirBooleano(ctx, conversation, '17. ¿Es *militante*?');
+    const credencial_vigente = await pedirBooleano(ctx, conversation, '19. ¿La credencial está *vigente*?');
+    const es_militante = await pedirBooleano(ctx, conversation, '20. ¿Es *militante*?');
+    const firma_capturada = await pedirBooleano(ctx, conversation, '21. ¿Se cuenta con la *Firma Capturada*?');
     
     // Resumen
     const resumen = `📋 *RESUMEN DEL RC*
 👤 Nombre: ${nombre} ${apellido_paterno} ${apellido_materno}
-💳 Clave: ${clave_elector}
+💳 Clave: ${clave_elector} | OCR: ${numero_credencial || 'N/A'} | CIC: ${cic || 'N/A'}
 📞 Tel: ${telefono}
-📍 DF: ${df_id} | DL: ${dl_id} | Sec: ${seccion_id}
+📍 Mun: ${municipio_id} | DF: ${df_id} | DL: ${dl_id} | Sec: ${seccion_id}
 🗳️ Casilla: ${casillaStr} (${tipo_nombramiento})
 🏠 Dir: ${calle} ${num_ext}, ${colonia}, CP ${codigo_postal}
+✅ Firma: ${firma_capturada ? 'Sí' : 'No'} | Militante: ${es_militante ? 'Sí' : 'No'}
 
 ¿Deseas guardar este registro?`;
 
@@ -164,10 +177,11 @@ export async function conversacionRegistroRC(conversation, ctx) {
       apellido_paterno,
       apellido_materno,
       clave_elector: clave_elector.toUpperCase().trim().replace(/[^A-Z0-9]/g, ''),
-      numero_credencial: '',
-      cic: '',
+      numero_credencial: numero_credencial.toUpperCase().trim().replace(/[^A-Z0-9]/g, ''),
+      cic: cic.toUpperCase().trim().replace(/[^A-Z0-9]/g, ''),
       telefono: telefono.replace(/\D/g, '').slice(0, 10),
       correo_electronico: correo_electronico !== '-' ? correo_electronico.toLowerCase().trim() : null,
+      municipio_id,
       df_id,
       dl_id,
       seccion_id,
@@ -180,7 +194,7 @@ export async function conversacionRegistroRC(conversation, ctx) {
       es_militante,
       autoriza_propaganda: false,
       tipo_propaganda: 'Ninguno',
-      firma_capturada: false,
+      firma_capturada,
       casilla_id,
       tipo_nombramiento,
       capturista_id: miembro.id
