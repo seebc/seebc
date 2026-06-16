@@ -2100,90 +2100,100 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {rutas.length === 0 ? (
-                    <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-surface-200 border-dashed">
-                      <Route className="w-12 h-12 text-surface-300 mx-auto mb-3" />
-                      <h3 className="text-lg font-medium text-surface-900">No hay rutas registradas</h3>
-                      <p className="text-surface-500">Comienza creando tu primera ruta de trabajo.</p>
-                    </div>
-                  ) : (
-                    rutas.map(ruta => {
-                      const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
-                      const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
-                      const casillasDeRuta = casillas
-                        .filter(c => casillaIds.includes(String(c.casilla_id)))
-                        .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
+                <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                      <thead className="bg-surface-50 border-b border-surface-200">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Ruta</th>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">RG Responsable</th>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Municipio</th>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Casillas Asignadas</th>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-surface-100">
+                        {rutas.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-surface-500">
+                              <Route className="w-8 h-8 mx-auto mb-3 text-surface-300" />
+                              <p className="font-medium text-surface-900">No hay rutas registradas</p>
+                              <p className="text-sm">Comienza creando tu primera ruta.</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          rutas.map(ruta => {
+                            const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                            const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
+                            const casillasDeRuta = casillas
+                              .filter(c => casillaIds.includes(String(c.casilla_id)))
+                              .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
 
-                      return (
-                        <div key={ruta.id} className="bg-white rounded-2xl border border-surface-200 overflow-hidden hover:shadow-lg hover:border-primary-200 transition-all duration-300 flex flex-col group">
-                          {/* Card Header */}
-                          <div className="p-5 border-b border-surface-100 flex items-start justify-between bg-gradient-to-br from-surface-50 to-white">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary-100 text-primary-600 p-2.5 rounded-xl group-hover:scale-110 transition-transform">
-                                <Route className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-surface-900 text-lg uppercase tracking-tight leading-tight">
-                                  {ruta.nombre_ruta}
-                                </h3>
-                                <p className="text-xs font-medium text-surface-500 uppercase mt-0.5 flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-surface-300"></span>
-                                  {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Acciones */}
-                            <div className="flex bg-surface-100 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-500 hover:text-primary-600 hover:bg-white rounded-md transition-all" title="Editar">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-500 hover:text-danger-600 hover:bg-white rounded-md transition-all" title="Eliminar">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Card Body */}
-                          <div className="p-5 flex-1 flex flex-col gap-4">
-                            <div>
-                              <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-1.5">RG Responsable</p>
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600">
-                                  <UserCircle className="w-4 h-4" />
-                                </div>
-                                <span className="text-sm font-medium text-surface-800 uppercase">
-                                  {rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : <span className="text-surface-400 italic normal-case">Sin asignar</span>}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Casillas Asignadas</p>
-                                <span className="bg-primary-50 text-primary-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                                  {casillasDeRuta.length}
-                                </span>
-                              </div>
-                              
-                              {casillasDeRuta.length > 0 ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {casillasDeRuta.map(c => (
-                                    <span key={c.id} className="text-[11px] bg-surface-50 text-surface-700 px-2 py-1 rounded-md border border-surface-200 uppercase font-semibold tracking-wide">
-                                      {c.casilla}
+                            return (
+                              <tr key={ruta.id} className="hover:bg-surface-50 transition-colors group">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="bg-primary-50 text-primary-600 p-1.5 rounded-md">
+                                      <Route className="w-4 h-4" />
+                                    </div>
+                                    <span className="font-bold text-surface-900 uppercase tracking-tight">
+                                      {ruta.nombre_ruta}
                                     </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-surface-400 italic">No hay casillas asignadas</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {rg ? (
+                                    <div className="flex items-center gap-2">
+                                      <UserCircle className="w-4 h-4 text-surface-400" />
+                                      <span className="text-sm font-medium text-surface-800 uppercase">
+                                        {`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-surface-400 italic">Sin asignar</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-700 uppercase">
+                                    {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="bg-primary-50 text-primary-700 text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                                      {casillasDeRuta.length}
+                                    </span>
+                                    <div className="flex gap-1 overflow-hidden max-w-[250px] flex-wrap">
+                                      {casillasDeRuta.slice(0, 3).map(c => (
+                                        <span key={c.id} className="text-[10px] bg-white border border-surface-200 text-surface-600 px-1.5 py-0.5 rounded uppercase font-medium shadow-sm">
+                                          {c.casilla}
+                                        </span>
+                                      ))}
+                                      {casillasDeRuta.length > 3 && (
+                                        <span className="text-[10px] bg-surface-100 text-surface-500 px-1.5 py-0.5 rounded font-medium">
+                                          +{casillasDeRuta.length - 3} más
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-colors" title="Editar">
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors" title="Eliminar">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
