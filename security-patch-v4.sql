@@ -9,8 +9,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- 2. Encriptar contraseñas existentes (que no estén encriptadas)
 -- NOTA: Esto asume que el usuario tiene 'password' en texto plano y no con un hash de bcrypt ($2a$...).
 UPDATE public.usuarios 
-SET password = crypt(password, gen_salt('bf'))
-WHERE password NOT LIKE '$2a$%';
+SET contrasena = crypt(contrasena, gen_salt('bf'))
+WHERE contrasena NOT LIKE '$2a$%';
 
 -- 3. Actualizar la función de validación de Login para usar hashes (pgcrypto)
 CREATE OR REPLACE FUNCTION public.validate_login(p_usuario text, p_contrasena text)
@@ -22,7 +22,7 @@ BEGIN
     SELECT to_jsonb(u.*) INTO v_user
     FROM public.usuarios u
     WHERE LOWER(u.usuario) = LOWER(p_usuario)
-      AND u.password = crypt(p_contrasena, u.password);
+      AND u.contrasena = crypt(p_contrasena, u.contrasena);
 
     IF v_user IS NULL THEN
         RAISE EXCEPTION 'Credenciales no validas';
