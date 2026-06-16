@@ -52,8 +52,9 @@ CREATE OR REPLACE FUNCTION is_admin(user_id int) RETURNS boolean AS $$
 DECLARE
   v_rol text;
 BEGIN
+  IF user_id IS NULL THEN RETURN false; END IF;
   SELECT rol INTO v_rol FROM public.usuarios WHERE id = user_id;
-  RETURN v_rol = 'admin';
+  RETURN COALESCE(v_rol = 'admin', false);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -71,7 +72,7 @@ BEGIN
     SELECT capturista_id INTO v_owner_id FROM public.rg WHERE id = p_id;
     
     -- VALIDACIÓN IDOR: Si no eres el dueño del registro y tampoco eres admin, rechazamos
-    IF v_owner_id != v_caller_id AND NOT is_admin(v_caller_id) THEN
+    IF v_caller_id IS NULL OR (v_owner_id != v_caller_id AND NOT is_admin(v_caller_id)) THEN
       RAISE EXCEPTION 'No tienes permiso para editar este registro.';
     END IF;
 
@@ -136,7 +137,7 @@ BEGIN
     SELECT capturista_id INTO v_owner_id FROM public.rc WHERE id = p_id;
     
     -- VALIDACIÓN IDOR: Si no eres el dueño del registro y tampoco eres admin, rechazamos
-    IF v_owner_id != v_caller_id AND NOT is_admin(v_caller_id) THEN
+    IF v_caller_id IS NULL OR (v_owner_id != v_caller_id AND NOT is_admin(v_caller_id)) THEN
       RAISE EXCEPTION 'No tienes permiso para editar este registro.';
     END IF;
 
