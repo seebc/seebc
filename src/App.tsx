@@ -2100,86 +2100,90 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="table-wrapper overflow-x-auto">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Ruta</th>
-                        <th>RG Responsable</th>
-                        <th>Municipio</th>
-                        <th>Casillas</th>
-                        <th className="text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rutas.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center py-8 text-surface-500">
-                            No hay rutas registradas.
-                          </td>
-                        </tr>
-                      ) : (
-                        rutas.map(ruta => {
-                          const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
-                          return (
-                            <tr key={ruta.id}>
-                              <td className="font-bold text-surface-900 uppercase">
-                                <div className="flex items-center gap-2">
-                                  <Route className="w-4 h-4 text-surface-400" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {rutas.length === 0 ? (
+                    <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-surface-200 border-dashed">
+                      <Route className="w-12 h-12 text-surface-300 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-surface-900">No hay rutas registradas</h3>
+                      <p className="text-surface-500">Comienza creando tu primera ruta de trabajo.</p>
+                    </div>
+                  ) : (
+                    rutas.map(ruta => {
+                      const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                      const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
+                      const casillasDeRuta = casillas
+                        .filter(c => casillaIds.includes(String(c.casilla_id)))
+                        .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
+
+                      return (
+                        <div key={ruta.id} className="bg-white rounded-2xl border border-surface-200 overflow-hidden hover:shadow-lg hover:border-primary-200 transition-all duration-300 flex flex-col group">
+                          {/* Card Header */}
+                          <div className="p-5 border-b border-surface-100 flex items-start justify-between bg-gradient-to-br from-surface-50 to-white">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-primary-100 text-primary-600 p-2.5 rounded-xl group-hover:scale-110 transition-transform">
+                                <Route className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-surface-900 text-lg uppercase tracking-tight leading-tight">
                                   {ruta.nombre_ruta}
+                                </h3>
+                                <p className="text-xs font-medium text-surface-500 uppercase mt-0.5 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-surface-300"></span>
+                                  {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Acciones */}
+                            <div className="flex bg-surface-100 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-500 hover:text-primary-600 hover:bg-white rounded-md transition-all" title="Editar">
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-500 hover:text-danger-600 hover:bg-white rounded-md transition-all" title="Eliminar">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="p-5 flex-1 flex flex-col gap-4">
+                            <div>
+                              <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-1.5">RG Responsable</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center text-surface-600">
+                                  <UserCircle className="w-4 h-4" />
                                 </div>
-                              </td>
-                              <td className="uppercase">
-                                {rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : <span className="text-surface-400 italic normal-case">Sin asignar</span>}
-                              </td>
-                              <td className="uppercase">
-                                {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
-                              </td>
-                              <td>
-                                <div className="flex flex-col gap-1">
-                                  {(() => {
-                                    const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
-                                    const casillasDeRuta = casillas
-                                      .filter(c => casillaIds.includes(String(c.casilla_id)))
-                                      .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
-                                    
-                                    return (
-                                      <>
-                                        <div>
-                                          <span className="badge badge-neutral">
-                                            {casillasDeRuta.length}
-                                          </span>
-                                        </div>
-                                        {casillasDeRuta.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
-                                            {casillasDeRuta.map(c => (
-                                              <span key={c.id} className="text-[10px] bg-surface-100 text-surface-600 px-1.5 py-0.5 rounded border border-surface-200 uppercase font-medium">
-                                                {c.casilla}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </>
-                                    );
-                                  })()}
+                                <span className="text-sm font-medium text-surface-800 uppercase">
+                                  {rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : <span className="text-surface-400 italic normal-case">Sin asignar</span>}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Casillas Asignadas</p>
+                                <span className="bg-primary-50 text-primary-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                  {casillasDeRuta.length}
+                                </span>
+                              </div>
+                              
+                              {casillasDeRuta.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {casillasDeRuta.map(c => (
+                                    <span key={c.id} className="text-[11px] bg-surface-50 text-surface-700 px-2 py-1 rounded-md border border-surface-200 uppercase font-semibold tracking-wide">
+                                      {c.casilla}
+                                    </span>
+                                  ))}
                                 </div>
-                              </td>
-                              <td className="text-right">
-                                <div className="flex justify-end gap-1">
-                                  <button onClick={() => handleEditRuta(ruta)} className="btn-icon" title="Editar">
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={() => handleDeleteRuta(ruta.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar">
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                              ) : (
+                                <p className="text-sm text-surface-400 italic">No hay casillas asignadas</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
