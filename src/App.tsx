@@ -2102,8 +2102,8 @@ export default function App() {
 
                 <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
-                      <thead className="bg-surface-50 border-b border-surface-200">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-surface-50 border-b border-surface-200 whitespace-nowrap">
                         <tr>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Ruta</th>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">RG Responsable</th>
@@ -2131,7 +2131,7 @@ export default function App() {
 
                             return (
                               <tr key={ruta.id} className="hover:bg-surface-50 transition-colors group">
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 whitespace-nowrap">
                                   <div className="flex items-center gap-2">
                                     <div className="bg-primary-50 text-primary-600 p-1.5 rounded-md">
                                       <Route className="w-4 h-4" />
@@ -2141,11 +2141,11 @@ export default function App() {
                                     </span>
                                   </div>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 min-w-[200px]">
                                   {rg ? (
                                     <div className="flex items-center gap-2">
-                                      <UserCircle className="w-4 h-4 text-surface-400" />
-                                      <span className="text-sm font-medium text-surface-800 uppercase">
+                                      <UserCircle className="w-4 h-4 text-surface-400 shrink-0" />
+                                      <span className="text-sm font-medium text-surface-800 uppercase leading-snug">
                                         {`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}
                                       </span>
                                     </div>
@@ -2153,27 +2153,22 @@ export default function App() {
                                     <span className="text-sm text-surface-400 italic">Sin asignar</span>
                                   )}
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 whitespace-nowrap">
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-700 uppercase">
                                     {municipios.find(m => m.id === ruta.municipio_id)?.municipio || 'N/A'}
                                   </span>
                                 </td>
                                 <td className="py-3 px-4">
-                                  <div className="flex items-center gap-2">
-                                    <span className="bg-primary-50 text-primary-700 text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                                  <div className="flex items-start gap-2">
+                                    <span className="bg-primary-50 text-primary-700 text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center mt-0.5 shrink-0">
                                       {casillasDeRuta.length}
                                     </span>
-                                    <div className="flex gap-1 overflow-hidden max-w-[250px] flex-wrap">
-                                      {casillasDeRuta.slice(0, 3).map(c => (
-                                        <span key={c.id} className="text-[10px] bg-white border border-surface-200 text-surface-600 px-1.5 py-0.5 rounded uppercase font-medium shadow-sm">
+                                    <div className="flex gap-1.5 flex-wrap">
+                                      {casillasDeRuta.map(c => (
+                                        <span key={c.id} className="text-[11px] bg-white border border-surface-200 text-surface-600 px-1.5 py-0.5 rounded uppercase font-medium shadow-sm whitespace-nowrap">
                                           {c.casilla}
                                         </span>
                                       ))}
-                                      {casillasDeRuta.length > 3 && (
-                                        <span className="text-[10px] bg-surface-100 text-surface-500 px-1.5 py-0.5 rounded font-medium">
-                                          +{casillasDeRuta.length - 3} más
-                                        </span>
-                                      )}
                                     </div>
                                   </div>
                                 </td>
