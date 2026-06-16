@@ -13,6 +13,7 @@ SET contrasena = crypt(contrasena, gen_salt('bf'))
 WHERE contrasena NOT LIKE '$2a$%';
 
 -- 3. Actualizar la función de validación de Login para usar hashes (pgcrypto)
+DROP FUNCTION IF EXISTS public.validate_login(text, text);
 CREATE OR REPLACE FUNCTION public.validate_login(p_usuario text, p_contrasena text)
 RETURNS jsonb AS $$
 DECLARE
