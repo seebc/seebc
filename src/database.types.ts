@@ -337,6 +337,34 @@ export interface Database {
         }
         Relationships: []
       }
+      login_logs: {
+        Row: {
+          id: number
+          usuario_id: number | null
+          nombre_usuario: string | null
+          fecha_hora: string
+        }
+        Insert: {
+          id?: number
+          usuario_id?: number | null
+          nombre_usuario?: string | null
+          fecha_hora?: string
+        }
+        Update: {
+          id?: number
+          usuario_id?: number | null
+          nombre_usuario?: string | null
+          fecha_hora?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "login_logs_usuario_id_fkey"
+            columns: ["usuario_id"]
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

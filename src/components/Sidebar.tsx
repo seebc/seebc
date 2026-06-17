@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  if (currentUser?.rol === 'ADMIN') {
+  if (currentUser?.rol === 'ADMIN' || currentUser?.rol === 1 || currentUser?.rol === '1') {
     navigationItems.push({
       id: 'group_admin',
       label: 'Configuración',
@@ -106,6 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       isGroup: true,
       subItems: [
         { id: 'usuarios_mgmt', label: 'Usuarios', Icon: Users },
+        { id: 'logs', label: 'Logs de Acceso', Icon: ClipboardList },
       ]
     } as any);
   }

@@ -7,6 +7,7 @@ import {
   vincularTelegramId,
   verificarUsuarioActivo,
   obtenerMisCapturas,
+  registrarAccesoBot,
 } from './db.js';
 import { authMiddleware } from './middleware.js';
 import { tecladoCompartirTelefono, menuPrincipal } from './teclados.js';
@@ -144,6 +145,8 @@ bot.on('message:contact', async (ctx) => {
 
     // Vincular telegram_id
     await vincularTelegramId(usuario.id, telegramId);
+    // Registrar acceso en el log
+    await registrarAccesoBot(usuario.id, usuario.nombre_completo || usuario.usuario);
     // Attach member info to context and session
     ctx.miembro = { ...usuario, telegram_id: telegramId, bot_activo: true };
     ctx.session.miembro = ctx.miembro;

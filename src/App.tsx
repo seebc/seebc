@@ -26,6 +26,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardStats from './components/DashboardStats';
 import ValidadorCredencial from './components/ValidadorCredencial';
+import LoginLogs from './components/LoginLogs';
 import { 
   SkeletonTable,
   SkeletonDashboard
@@ -122,7 +123,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   // --- UI y Navegación ---
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_rutas' | 'reporte_por_ruta' | 'usuarios_mgmt'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generales' | 'casilla' | 'listado_rg' | 'listado_rc' | 'casillas_form' | 'casillas_list' | 'rutas_form' | 'rutas_list' | 'reporte_rutas' | 'reporte_por_ruta' | 'usuarios_mgmt' | 'logs'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -247,10 +248,20 @@ export default function App() {
     toast.success('Sesión cerrada');
   }, []);
 
-  const handleLoginSuccess = (user: any) => {
+  const handleLoginSuccess = async (user: any) => {
     // La sesión la maneja ahora onAuthStateChange de forma centralizada
     setCurrentUser(user);
     toast.success('Bienvenido, ' + (user.nombre_completo || user.usuario));
+    
+    try {
+      await supabase.from('login_logs').insert([{
+        usuario_id: user.id,
+        nombre_usuario: user.nombre_completo || user.usuario,
+        fuente: 'web'
+      }]);
+    } catch (err) {
+      console.error('Error logging access', err);
+    }
   };
 
   useSessionTimeout(handleLogout, !!currentUser);
@@ -787,6 +798,7 @@ export default function App() {
     reporte_rutas: 'Listados Operativos',
     reporte_por_ruta: 'Reporte por Ruta',
     usuarios_mgmt: 'Gestión de Usuarios',
+    logs: 'Logs de Acceso',
   };
 
   return (
@@ -2503,6 +2515,10 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            )}
+            {/* ============ LOGS DE ACCESO ============ */}
+            {activeTab === 'logs' && (currentUser?.rol === 'ADMIN' || currentUser?.rol === 1 || currentUser?.rol === '1') && (
+              <LoginLogs />
             )}
           </div>
         )}

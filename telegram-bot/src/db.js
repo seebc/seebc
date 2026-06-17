@@ -155,4 +155,17 @@ export async function obtenerMisCapturas(usuarioId) {
   return { rg: rg.data || [], rc: rc.data || [] };
 }
 
+export async function registrarAccesoBot(usuarioId, nombreUsuario) {
+  const supabase = getClient();
+  try {
+    await supabase.from('login_logs').insert([{
+      usuario_id: usuarioId,
+      nombre_usuario: nombreUsuario,
+      fuente: 'telegram'
+    }]);
+  } catch (err) {
+    console.error('[registrarAccesoBot] Error registrando acceso:', err.message);
+  }
+}
+
 export default getClient;
