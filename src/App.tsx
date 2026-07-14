@@ -1209,12 +1209,12 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="text-center">Acciones</th>
                         <th>Nombre Completo</th>
                         <th>Teléfono</th>
                         <th>Correo</th>
                         <th>Municipio / Sección</th>
                         <th>Distritos</th>
-                        <th className="text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1235,6 +1235,12 @@ export default function App() {
                           
                           return (
                             <tr key={rg.id}>
+                              <td className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => handleEditRg(rg)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDeleteRg(rg.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              </td>
                               <td>
                                 <span className="font-semibold text-surface-800 uppercase">{rg.nombre} {rg.apellido_paterno} {rg.apellido_materno || ''}</span>
                               </td>
@@ -1254,12 +1260,6 @@ export default function App() {
                                 <div className="flex gap-1.5">
                                   <span className="badge-info">DF {dfObj?.df || 'N/A'}</span>
                                   <span className="badge-success">DL {dlObj?.dl || 'N/A'}</span>
-                                </div>
-                              </td>
-                              <td className="text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => handleEditRg(rg)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDeleteRg(rg.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                                 </div>
                               </td>
                             </tr>
@@ -1701,11 +1701,11 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="text-center">Acciones</th>
                         <th>Nombre Completo</th>
                         <th>Casilla</th>
                         <th>Tipo</th>
                         <th>RG Responsable</th>
-                        <th className="text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1726,16 +1726,16 @@ export default function App() {
 
                           return (
                             <tr key={rc.id}>
-                              <td><span className="font-semibold text-surface-800 uppercase">{rc.nombre} {rc.apellido_paterno}</span></td>
-                              <td><span className="font-semibold text-inst-600 text-xs">{cas?.casilla || 'N/A'}</span></td>
-                              <td><span className="text-xs text-surface-500">{rc.tipo_nombramiento}</span></td>
-                              <td><span className="text-xs text-surface-600">{rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'Sin asignar'}</span></td>
                               <td className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => handleEditRc(rc)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
                                   <button onClick={() => handleDeleteRc(rc.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                                 </div>
                               </td>
+                              <td><span className="font-semibold text-surface-800 uppercase">{rc.nombre} {rc.apellido_paterno}</span></td>
+                              <td><span className="font-semibold text-inst-600 text-xs">{cas?.casilla || 'N/A'}</span></td>
+                              <td><span className="text-xs text-surface-500">{rc.tipo_nombramiento}</span></td>
+                              <td><span className="text-xs text-surface-600">{rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'Sin asignar'}</span></td>
                             </tr>
                           );
                         })}
@@ -2106,11 +2106,11 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead className="bg-surface-50 border-b border-surface-200 whitespace-nowrap">
                         <tr>
+                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider text-center">Acciones</th>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Ruta</th>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">RG Responsable</th>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Municipio</th>
                           <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider">Casillas Asignadas</th>
-                          <th className="py-3 px-4 font-semibold text-surface-600 text-xs uppercase tracking-wider text-right">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-100">
@@ -2132,6 +2132,16 @@ export default function App() {
 
                             return (
                               <tr key={ruta.id} className="hover:bg-surface-50 transition-colors group">
+                                <td className="py-3 px-4 text-center">
+                                  <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-colors" title="Editar">
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors" title="Eliminar">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
                                 <td className="py-3 px-4 whitespace-nowrap">
                                   <div className="flex items-center gap-2">
                                     <div className="bg-primary-50 text-primary-600 p-1.5 rounded-md">
@@ -2171,16 +2181,6 @@ export default function App() {
                                         </span>
                                       ))}
                                     </div>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-colors" title="Editar">
-                                      <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors" title="Eliminar">
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -2444,15 +2444,34 @@ export default function App() {
                         <table className="data-table">
                           <thead>
                             <tr>
+                              <th className="text-center">Acciones</th>
                               <th>Usuario</th>
                               <th>Nombre / Rol</th>
                               <th>📱 Teléfono</th>
-                              <th className="text-center">Acciones</th>
                             </tr>
                           </thead>
                           <tbody>
                             {usuarios.map(u => (
                               <tr key={u.id} className={u.id === currentUser?.id ? 'bg-surface-50' : ''}>
+                                <td className="text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button 
+                                      onClick={() => handleEditUser(u)} 
+                                      className="btn-icon" 
+                                      title="Editar"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteUser(u.id)} 
+                                      className={`btn-icon hover:!text-danger-600 hover:!bg-danger-50 ${u.id === currentUser?.id ? 'opacity-20 cursor-not-allowed' : ''}`} 
+                                      disabled={u.id === currentUser?.id}
+                                      title={u.id === currentUser?.id ? 'No puedes eliminarte a ti mismo' : 'Eliminar'}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
                                 <td>
                                   <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${u.rol === 'ADMIN' ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-600'}`}>
@@ -2475,25 +2494,6 @@ export default function App() {
                                   ) : (
                                     <span className="text-xs text-surface-300 italic">Sin teléfono</span>
                                   )}
-                                </td>
-                                <td className="text-center">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button 
-                                      onClick={() => handleEditUser(u)} 
-                                      className="btn-icon" 
-                                      title="Editar"
-                                    >
-                                      <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button 
-                                      onClick={() => handleDeleteUser(u.id)} 
-                                      className={`btn-icon hover:!text-danger-600 hover:!bg-danger-50 ${u.id === currentUser?.id ? 'opacity-20 cursor-not-allowed' : ''}`} 
-                                      disabled={u.id === currentUser?.id}
-                                      title={u.id === currentUser?.id ? 'No puedes eliminarte a ti mismo' : 'Eliminar'}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
                                 </td>
                               </tr>
                             ))}
