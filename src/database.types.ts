@@ -342,18 +342,21 @@ export interface Database {
           id: number
           usuario_id: number | null
           nombre_usuario: string | null
+          fuente: string | null
           fecha_hora: string
         }
         Insert: {
           id?: number
           usuario_id?: number | null
           nombre_usuario?: string | null
+          fuente?: string | null
           fecha_hora?: string
         }
         Update: {
           id?: number
           usuario_id?: number | null
           nombre_usuario?: string | null
+          fuente?: string | null
           fecha_hora?: string
         }
         Relationships: [

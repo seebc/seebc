@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
 
-window.onerror = function(msg, url, line) {
+window.onerror = function(msg, _url, line) {
   console.error("ERROR:", msg, "line:", line);
   return false;
 };

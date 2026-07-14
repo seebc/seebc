@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { RefreshCw, Clock, User, Monitor, Bot } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface LoginLog {
   id: number;
-  usuario_id: number;
-  nombre_usuario: string;
-  fuente: string;
+  usuario_id: number | null;
+  nombre_usuario: string | null;
+  fuente: string | null;
   fecha_hora: string;
 }
 
@@ -50,7 +50,7 @@ export default function LoginLogs() {
     }).format(d);
   };
 
-  const FuenteBadge = ({ fuente }: { fuente: string }) => {
+  const FuenteBadge = ({ fuente }: { fuente: string | null }) => {
     const isWeb = !fuente || fuente === 'web';
     return (
       <span

@@ -15,8 +15,7 @@ import {
   Eye,
   EyeOff,
   Printer,
-  X,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Database, Tables } from './database.types';
@@ -229,16 +228,6 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // --- Utilidades de Auditoría y Normalización ---
-  const normalizeText = useCallback((text: string) => 
-    text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "", []);
-
-  const matchesSearch = useCallback((item: any, fields: string[]) => {
-    if (!searchTerm) return true;
-    const q = normalizeText(searchTerm);
-    return fields.some(f => normalizeText(String(item[f] || "")).includes(q));
-  }, [searchTerm, normalizeText]);
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
@@ -1887,7 +1876,7 @@ export default function App() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                {currentUser?.rol === 1 && (
+                                {(currentUser?.rol === 'ADMIN' || currentUser?.rol === '1') && (
                                   <button 
                                     onClick={() => handleDeleteCasilla(cas.casilla_id)} 
                                     className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
@@ -2517,7 +2506,7 @@ export default function App() {
               </div>
             )}
             {/* ============ LOGS DE ACCESO ============ */}
-            {activeTab === 'logs' && (currentUser?.rol === 'ADMIN' || currentUser?.rol === 1 || currentUser?.rol === '1') && (
+            {activeTab === 'logs' && (currentUser?.rol === 'ADMIN' || currentUser?.rol === '1') && (
               <LoginLogs />
             )}
           </div>
