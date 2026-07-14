@@ -1876,7 +1876,7 @@ export default function App() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                {(currentUser?.rol === 'ADMIN' || currentUser?.rol === '1') && (
+                                {(String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') && (
                                   <button 
                                     onClick={() => handleDeleteCasilla(cas.casilla_id)} 
                                     className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
@@ -2474,7 +2474,7 @@ export default function App() {
                                 </td>
                                 <td>
                                   <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${u.rol === 'ADMIN' ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-600'}`}>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${(String(u.rol) === '1' || u.rol === 'ADMIN') ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-600'}`}>
                                       {u.usuario.charAt(0).toUpperCase()}
                                     </div>
                                     <span className="font-semibold text-surface-900">{u.usuario}</span>
@@ -2483,8 +2483,8 @@ export default function App() {
                                 <td>
                                   <div>
                                     <p className="text-sm font-medium text-surface-700">{u.nombre_completo || '—'}</p>
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${u.rol === 'ADMIN' ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-500'}`}>
-                                      {u.rol}
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${(String(u.rol) === '1' || u.rol === 'ADMIN') ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-500'}`}>
+                                      {(String(u.rol) === '1' || u.rol === 'ADMIN') ? 'ADMIN' : (String(u.rol) === '2' || u.rol === 'CAPTURISTA') ? 'CAPTURISTA' : u.rol}
                                     </span>
                                   </div>
                                 </td>
@@ -2506,7 +2506,7 @@ export default function App() {
               </div>
             )}
             {/* ============ LOGS DE ACCESO ============ */}
-            {activeTab === 'logs' && (currentUser?.rol === 'ADMIN' || currentUser?.rol === '1') && (
+            {activeTab === 'logs' && (String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') && (
               <LoginLogs />
             )}
           </div>

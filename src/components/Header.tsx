@@ -80,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="hidden lg:block">
             <p className="text-sm font-semibold text-surface-800 leading-none">{currentUser?.usuario || 'Invitado'}</p>
-            <p className="text-[11px] text-surface-400 mt-0.5">{currentUser?.rol === 'ADMIN' ? 'Administrador' : 'Capturista'}</p>
+            <p className="text-[11px] text-surface-400 mt-0.5">{(String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') ? 'Administrador' : 'Capturista'}</p>
           </div>
         </div>
       </div>
