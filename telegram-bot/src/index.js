@@ -77,6 +77,8 @@ bot.command('start', async (ctx) => {
     // ¿Ya está registrado?
     const miembro = await verificarUsuarioActivo(telegramId);
     if (miembro) {
+      // Log the access for returning users
+      await registrarAccesoBot(miembro.id, miembro.nombre_completo || miembro.usuario);
       await ctx.reply(
         `¡Bienvenido de vuelta, *${miembro.nombre_completo || miembro.usuario}*! 👋\n\n` +
           '¿Qué deseas hacer?',

@@ -163,6 +163,7 @@ export async function registrarAccesoBot(usuarioId, nombreUsuario) {
       nombre_usuario: nombreUsuario,
       fuente: 'telegram'
     }]);
+    console.log('[registrarAccesoBot] Registro insertado para usuarioId=' + usuarioId);
   } catch (err) {
     console.error('[registrarAccesoBot] Error registrando acceso:', err.message);
   }
