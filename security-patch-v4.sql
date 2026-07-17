@@ -55,7 +55,8 @@ DECLARE
 BEGIN
   IF user_id IS NULL THEN RETURN false; END IF;
   SELECT rol INTO v_rol FROM public.usuarios WHERE id = user_id;
-  RETURN COALESCE(v_rol = 'admin', false);
+  -- Comparar en mayúsculas para soportar 'admin', 'ADMIN', 'Admin'
+  RETURN COALESCE(UPPER(v_rol) = 'ADMIN', false);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -191,3 +192,51 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================================
+-- 6. Políticas RLS de visibilidad
+-- Nota: el proyecto usa autenticación propia (no Supabase Auth),
+-- por eso usamos current_setting('jwt.claims.user_id') en lugar de auth.uid()
+-- =====================================================================
+
+-- Solo administradores pueden ver los logs de login
+DROP POLICY IF EXISTS "Allow public select" ON public.login_logs;
+CREATE POLICY "Admins can read login logs" ON public.login_logs
+FOR SELECT
+USING (is_admin(current_setting('jwt.claims.user_id', true)::int));
+
+-- Cada usuario solo puede leer los RC que él mismo capturó (admins ven todo)
+DROP POLICY IF EXISTS "Allow read for anon" ON public.rc;
+CREATE POLICY "Owner or admin can read rc" ON public.rc
+FOR SELECT
+USING (
+  capturista_id = current_setting('jwt.claims.user_id', true)::int
+  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
+);
+
+-- Cada usuario solo puede leer los RG que él mismo capturó (admins ven todo)
+DROP POLICY IF EXISTS "Allow read for anon" ON public.rg;
+CREATE POLICY "Owner or admin can read rg" ON public.rg
+FOR SELECT
+USING (
+  capturista_id = current_setting('jwt.claims.user_id', true)::int
+  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
+);
+
+-- Cada usuario solo puede leer las Rutas que él mismo capturó (admins ven todo)
+DROP POLICY IF EXISTS "Allow read for anon" ON public.rutas;
+CREATE POLICY "Owner or admin can read rutas" ON public.rutas
+FOR SELECT
+USING (
+  capturista_id = current_setting('jwt.claims.user_id', true)::int
+  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
+);
+
+-- Cada usuario solo puede leer las Casillas que él mismo capturó (admins ven todo)
+DROP POLICY IF EXISTS "Allow read for anon" ON public.casillas;
+CREATE POLICY "Owner or admin can read casillas" ON public.casillas
+FOR SELECT
+USING (
+  capturista_id = current_setting('jwt.claims.user_id', true)::int
+  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
+);

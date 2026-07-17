@@ -87,12 +87,13 @@ export async function conversacionRegistroRC(conversation, ctx) {
     
     const nombre = await pedirTexto(ctx, conversation, '2. *Nombre(s)* del RC:');
     const apellido_paterno = await pedirTexto(ctx, conversation, '3. *Apellido Paterno*:');
-    const apellido_materno = await pedirTexto(ctx, conversation, '4. *Apellido Materno*:', false);
+    const apellido_materno = await pedirTexto(ctx, conversation, '4. *Apellido Materno*:', true);
     const telefono = await pedirTexto(ctx, conversation, '5. *Teléfono* (10 dígitos):');
     const correo_electronico = (await pedirTexto(ctx, conversation, '6. *Correo Electrónico*:', true)).toLowerCase();
+    
     const numero_credencial = await pedirTexto(ctx, conversation, '7. *Número de Credencial (OCR)* (Reverso de la INE):', true);
     const cic = await pedirTexto(ctx, conversation, '8. *CIC* (Identificador Ciudadano de 9 dígitos):', true);
-
+    
     // 2. Ubicación Electoral
     const municipios = await conversation.external(() => getMunicipios());
     const tecladoMuns = new InlineKeyboard();
@@ -101,16 +102,16 @@ export async function conversacionRegistroRC(conversation, ctx) {
     const cbMun = await conversation.waitFor('callback_query:data');
     await cbMun.answerCallbackQuery();
     const municipio_id = parseInt(cbMun.callbackQuery.data);
-
+    
     const dfInput = await pedirTexto(ctx, conversation, '10. *Distrito Federal (DF)* (ej. 1, 2, 7):');
     const df_id = parseInt(dfInput) || 0;
     
-    const dlInput = await pedirTexto(ctx, conversation, '8. *Distrito Local (DL)* (ej. 1, 2, 3...):');
+    const dlInput = await pedirTexto(ctx, conversation, '11. *Distrito Local (DL)* (ej. 1, 2, 3...):');
     const dl_id = parseInt(dlInput) || 0;
     
-    const seccionInput = await pedirTexto(ctx, conversation, '9. *Número de Sección* (para buscar la casilla):');
+    const seccionInput = await pedirTexto(ctx, conversation, '12. *Número de Sección* (para buscar la casilla):');
     const seccion_id = parseInt(seccionInput) || 0;
-
+    
     // Buscar casillas en esa sección
     let casilla_id = null;
     let casillaStr = '';
@@ -119,7 +120,7 @@ export async function conversacionRegistroRC(conversation, ctx) {
     if (casillas && casillas.length > 0) {
       const tecladoCasillas = new InlineKeyboard();
       casillas.forEach(c => tecladoCasillas.text(c.casilla, String(c.casilla_id)).row());
-      await ctx.reply(`Encontramos estas casillas para la sección ${seccion_id}. Selecciona una:`, { reply_markup: tecladoCasillas });
+      await ctx.reply(`13. Hemos encontrado estas casillas para la sección ${seccion_id}. Selecciona una:`, { reply_markup: tecladoCasillas });
       const cbCasilla = await conversation.waitFor('callback_query:data');
       await cbCasilla.answerCallbackQuery();
       casilla_id = cbCasilla.callbackQuery.data;
@@ -128,28 +129,28 @@ export async function conversacionRegistroRC(conversation, ctx) {
       await ctx.reply(`⚠️ No encontramos casillas para la sección ${seccion_id} en la base de datos. Pídele al admin que las revise. Cancelando...`);
       return;
     }
-
+    
     // Tipo de nombramiento
     const tecladoRoles = new InlineKeyboard()
       .text('Propietario 1', 'PROPIETARIO 1').text('Suplente 1', 'SUPLENTE 1').row()
       .text('Propietario 2', 'PROPIETARIO 2').text('Suplente 2', 'SUPLENTE 2');
     
-    await ctx.reply('10. ¿Qué *tipo de nombramiento* tiene?', { parse_mode: 'Markdown', reply_markup: tecladoRoles });
+    await ctx.reply('14. ¿Qué *tipo de nombramiento* tiene?', { parse_mode: 'Markdown', reply_markup: tecladoRoles });
     const cbRol = await conversation.waitFor('callback_query:data');
     await cbRol.answerCallbackQuery();
     const tipo_nombramiento = cbRol.callbackQuery.data;
-
+    
     // 3. Domicilio
-    const calle = await pedirTexto(ctx, conversation, '14. *Calle*:');
-    const num_ext = await pedirTexto(ctx, conversation, '15. *Número Exterior*:');
-    const num_int = await pedirTexto(ctx, conversation, '16. *Número Interior*:', true);
-    const colonia = await pedirTexto(ctx, conversation, '17. *Colonia*:');
-    const codigo_postal = await pedirTexto(ctx, conversation, '18. *Código Postal*:');
-
+    const calle = await pedirTexto(ctx, conversation, '15. *Calle*:');
+    const num_ext = await pedirTexto(ctx, conversation, '16. *Número Exterior*:');
+    const num_int = await pedirTexto(ctx, conversation, '17. *Número Interior*:', true);
+    const colonia = await pedirTexto(ctx, conversation, '18. *Colonia*:');
+    const codigo_postal = await pedirTexto(ctx, conversation, '19. *Código Postal*:');
+    
     // 4. Preguntas Booleanas
-    const credencial_vigente = await pedirBooleano(ctx, conversation, '19. ¿La credencial está *vigente*?');
-    const es_militante = await pedirBooleano(ctx, conversation, '20. ¿Es *militante*?');
-    const firma_capturada = await pedirBooleano(ctx, conversation, '21. ¿Se cuenta con la *Firma Capturada*?');
+    const credencial_vigente = await pedirBooleano(ctx, conversation, '20. ¿La credencial está *vigente*?');
+    const es_militante = await pedirBooleano(ctx, conversation, '21. ¿Es *militante*?');
+    const firma_capturada = await pedirBooleano(ctx, conversation, '22. ¿Se cuenta con la *Firma Capturada*?');
     
     // Resumen
     const resumen = `📋 *RESUMEN DEL RC*

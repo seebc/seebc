@@ -2507,7 +2507,7 @@ export default function App() {
             )}
             {/* ============ LOGS DE ACCESO ============ */}
             {activeTab === 'logs' && (String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') && (
-              <LoginLogs />
+              <LoginLogs currentUser={currentUser} />
             )}
           </div>
         )}
@@ -2547,7 +2547,8 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
 
         if (!authError && user) {
           authSuccess = true;
-          const { data: profile } = await supabase
+          const { data: profile } = await // Fallback bcrypt validation removed – Supabase Auth handles authentication fully.
+            supabase
             .from('usuarios')
             .select('*')
             .eq('user_id', user.id)
@@ -2560,25 +2561,7 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
           }
         }
       } catch (authErr) {
-        console.warn('Auth engine unavailable, using secure fallback:', authErr);
-      }
-
-      // 2. FALLBACK SEGURO: Validación bcrypt via RPC en el servidor
-      if (!authSuccess) {
-        const { data: profile, error: rpcError } = await supabase.rpc('validate_login', {
-          p_usuario: usuario.toLowerCase().trim(),
-          p_contrasena: password
-        });
-
-        if (rpcError || !profile) {
-          const delay = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          throw new Error('Credenciales no válidas.');
-        }
-
-        toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
-        onLoginSuccess(profile);
-        return;
+// Fallback bcrypt validation removed – Supabase Auth handles authentication fully.
       }
     } catch (err: any) {
       console.error('Login error:', err);

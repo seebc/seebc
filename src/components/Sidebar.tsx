@@ -161,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                       <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${!isOpen ? 'hidden lg:block' : ''} ${isGroupOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    {(isOpen || true) && isGroupOpen && (
+                    {isOpen && isGroupOpen && (
                       <div className="space-y-1 pl-4 border-l border-surface-800 ml-5 mt-1">
                         {item.subItems?.map((sub) => (
                           <button

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { RefreshCw, Clock, User, Monitor, Bot } from 'lucide-react';
+import { RefreshCw, Clock, User, Monitor, Bot, Shield } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface LoginLog {
@@ -11,18 +11,27 @@ interface LoginLog {
   fecha_hora: string;
 }
 
-export default function LoginLogs() {
+interface LoginLogsProps {
+  currentUser?: any;
+}
+
+export default function LoginLogs({ currentUser }: LoginLogsProps) {
   const [logs, setLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Verificar rol admin (soporta 'ADMIN', 'admin', 1, '1')
+  const isAdmin = (u: any) =>
+    u && (String(u.rol).toUpperCase() === 'ADMIN' || u.rol === 1 || u.rol === '1');
+
   const fetchLogs = async () => {
+    if (!isAdmin(currentUser)) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('login_logs')
-        .select('*')
-        .order('fecha_hora', { ascending: false })
-        .limit(100);
+  .from('login_logs')
+  .select('id, usuario_id, fuente, fecha_hora, usuarios(nombre_usuario)')
+  .order('fecha_hora', { ascending: false })
+  .limit(100);
 
       if (error) throw error;
       setLogs(data || []);
@@ -36,7 +45,8 @@ export default function LoginLogs() {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [currentUser]);
+
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -74,6 +84,19 @@ export default function LoginLogs() {
 
   return (
     <div className="p-6 animate-fade-in">
+      {/* Acceso denegado para no-administradores */}
+      {!isAdmin(currentUser) ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+            <Shield className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-surface-900 mb-2">Acceso Restringido</h2>
+          <p className="text-surface-500 text-sm max-w-xs">
+            Solo los administradores pueden ver los registros de acceso al sistema.
+          </p>
+        </div>
+      ) : (
+
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-surface-900 dark:text-white">Logs de Acceso</h2>
@@ -170,7 +193,7 @@ export default function LoginLogs() {
             </tbody>
           </table>
         </div>
-      </div>
+      )}
     </div>
   );
 }
