@@ -69,11 +69,13 @@ export async function conversacionRegistroRC(conversation, ctx) {
     // 1. Datos Personales
     let clave_elector = '';
     while (true) {
-      clave_elector = await pedirTexto(ctx, conversation, '1. Ingresa la *Clave de Elector* (18 caracteres):');
-      if (clave_elector.length !== 18) {
-        await ctx.reply('❌ La clave de elector debe tener exactamente 18 caracteres. Intenta de nuevo o escribe /cancelar.');
+      const raw_clave = await pedirTexto(ctx, conversation, '1. Ingresa la *Clave de Elector* (18 caracteres):');
+      const clave_elector_temp = raw_clave.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+      if (clave_elector_temp.length !== 18) {
+        await ctx.reply('❌ La clave de elector debe tener exactamente 18 caracteres alfanuméricos. Intenta de nuevo o escribe /cancelar.');
         continue;
       }
+      clave_elector = clave_elector_temp;
       
       const chequeo = await conversation.external(() => verificarClaveElectorExistente(clave_elector));
       if (chequeo.existe) {

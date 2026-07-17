@@ -35,15 +35,21 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
   const isRG = tipo === 'rg';
 
   const handleValidarClave = () => {
-    if (!credencialValidacion || credencialValidacion.length < 18) {
-      toast.error('Clave de elector incompleta');
+    const claveSanitizada = credencialValidacion.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+    if (claveSanitizada.length !== 18) {
+      toast.error('La clave de elector debe tener exactamente 18 caracteres alfanuméricos');
       return;
     }
 
-    // Buscar duplicados
-    const encontrada = [...representantesGenerales, ...representantesCasilla].find(r => {
-      if (r.clave_elector !== credencialValidacion) return false;
-      const isRecordRG = !('casilla_id' in r);
+    // Buscar duplicados con mapeo explícito de tipo para evitar errores de propiedades ausentes
+    const rgConTipo = representantesGenerales.map(r => ({ ...r, tipoRegistro: 'rg' }));
+    const rcConTipo = representantesCasilla.map(r => ({ ...r, tipoRegistro: 'rc' }));
+
+    const encontrada = [...rgConTipo, ...rcConTipo].find(r => {
+      const dbClave = (r.clave_elector || '').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+      if (dbClave !== claveSanitizada) return false;
+
+      const isRecordRG = r.tipoRegistro === 'rg';
       if (isRG) {
         if (isRecordRG && String(r.id) === String(editingRgId)) return false;
       } else {
@@ -59,7 +65,7 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
       setCredencialEncontrada(null);
       setMensajeValidacion('exito');
       toast.success('Clave validada');
-      onSuccess(credencialValidacion);
+      onSuccess(claveSanitizada);
     }
   };
   
@@ -84,7 +90,7 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
             placeholder="ABCD1234567890EFGH"
             maxLength={18}
             value={credencialValidacion}
-            onChange={e => setCredencialValidacion(e.target.value.toUpperCase())}
+            onChange={e => setCredencialValidacion(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400">
             <CheckCircle className="w-4 h-4" />
