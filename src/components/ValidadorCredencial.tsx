@@ -91,6 +91,12 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
             maxLength={18}
             value={credencialValidacion}
             onChange={e => setCredencialValidacion(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleValidarClave();
+              }
+            }}
           />
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400">
             <CheckCircle className="w-4 h-4" />
