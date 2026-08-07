@@ -96,8 +96,8 @@ export default function LoginLogs({ currentUser }: LoginLogsProps) {
           </p>
         </div>
       ) : (
-
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-surface-900 dark:text-white">Logs de Acceso</h2>
           <p className="text-surface-500 text-sm mt-1">Historial de inicios de sesión — Últimos 100 registros</p>
@@ -193,7 +193,9 @@ export default function LoginLogs({ currentUser }: LoginLogsProps) {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
+      </>
+    )}
     </div>
   );
 }

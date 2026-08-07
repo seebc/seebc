@@ -267,7 +267,10 @@ export default function App() {
         .from(tableName)
         .select('*')
         .range(from, to)
-        .order(tableName === 'rutas' ? 'nombre_ruta' : tableName === 'casillas' ? 'casilla' : 'nombre', { ascending: true });
+        .order(
+          tableName === 'rutas' ? 'nombre_ruta' : tableName === 'casillas' ? 'casilla' : tableName === 'secciones' ? 'id' : 'nombre',
+          { ascending: true }
+        );
 
       if (error) throw error;
       if (data && data.length > 0) {
@@ -294,18 +297,18 @@ export default function App() {
       const { data: usersData } = await supabase.from('usuarios').select('*');
       if (usersData) setUsuarios(usersData);
 
-      // 2. Cargar Catálogos (Pequeños, no necesitan paginación usualmente)
-      const [dfRes, dlRes, munRes, secRes] = await Promise.all([
+      // 2. Cargar Catálogos
+      const [dfRes, dlRes, munRes, secData] = await Promise.all([
         supabase.from('df').select('*'),
         supabase.from('dl').select('*'),
         supabase.from('municipios').select('*'),
-        supabase.from('secciones').select('*')
+        fetchAllFromTable('secciones')
       ]);
 
       if (dfRes.data) setDistritosFederales(dfRes.data);
       if (dlRes.data) setDistritosLocales(dlRes.data);
       if (munRes.data) setMunicipios(munRes.data);
-      if (secRes.data) setSecciones(secRes.data);
+      if (secData) setSecciones(secData);
 
       // 3. Cargar Datos Operativos con Paginación para romper el límite de 1000
       const [rgData, rcData, rutasData, casData] = await Promise.all([
@@ -1349,30 +1352,48 @@ export default function App() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
                         <label className="input-label">Municipio</label>
-                        <select required className="select-field" value={rgForm.municipio_id} onChange={e => setRgForm({...rgForm, municipio_id: e.target.value, seccion_id: ''})}>
+                        <select required className="select-field" value={rgForm.municipio_id} onChange={e => setRgForm(prev => ({ ...prev, municipio_id: e.target.value, seccion_id: '' }))}>
                           <option value="">Seleccionar...</option>
                           {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="input-label">Sección</label>
-                        <select required className="select-field" value={rgForm.seccion_id} onChange={e => setRgForm({...rgForm, seccion_id: e.target.value})}>
-                          <option value="">Seleccionar...</option>
-                          {secciones.filter(s => String(s.municipio_id) === rgForm.municipio_id).sort((a,b) => a.id - b.id).map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
-                        </select>
-                      </div>
-                      <div>
                         <label className="input-label">Distrito Federal</label>
-                        <select required className="select-field" value={rgForm.df_id} onChange={e => setRgForm({...rgForm, df_id: e.target.value})}>
+                        <select required className="select-field" value={rgForm.df_id} onChange={e => setRgForm(prev => ({ ...prev, df_id: e.target.value, seccion_id: '' }))}>
                           <option value="">Seleccionar...</option>
                           {[...distritosFederales].sort((a, b) => (a.df || 0) - (b.df || 0)).map(d => <option key={d.id} value={d.id}>DF {d.df}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="input-label">Distrito Local</label>
-                        <select required className="select-field" value={rgForm.dl_id} onChange={e => setRgForm({...rgForm, dl_id: e.target.value})}>
+                        <select required className="select-field" value={rgForm.dl_id} onChange={e => setRgForm(prev => ({ ...prev, dl_id: e.target.value, seccion_id: '' }))}>
                           <option value="">Seleccionar...</option>
                           {[...distritosLocales].sort((a, b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="input-label">Sección</label>
+                        <select required className="select-field" value={rgForm.seccion_id} onChange={e => {
+                          const selectedSecId = e.target.value;
+                          const sec = secciones.find(s => String(s.id) === selectedSecId);
+                          setRgForm(prev => ({
+                            ...prev,
+                            seccion_id: selectedSecId,
+                            ...(sec && sec.municipio_id ? { municipio_id: String(sec.municipio_id) } : {}),
+                            ...(sec && sec.df_id ? { df_id: String(sec.df_id) } : {}),
+                            ...(sec && sec.dl_id ? { dl_id: String(sec.dl_id) } : {})
+                          }));
+                        }}>
+                          <option value="">Seleccionar...</option>
+                          {secciones
+                            .filter(s => {
+                              if (rgForm.municipio_id && String(s.municipio_id) !== rgForm.municipio_id) return false;
+                              if (rgForm.df_id && String(s.df_id) !== rgForm.df_id) return false;
+                              if (rgForm.dl_id && String(s.dl_id) !== rgForm.dl_id) return false;
+                              return true;
+                            })
+                            .sort((a, b) => a.id - b.id)
+                            .map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
                         </select>
                       </div>
                     </div>
