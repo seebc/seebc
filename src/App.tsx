@@ -105,7 +105,17 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 export default function App() {
   // --- Estados de Sesión ---
-  const [currentUser, setCurrentUser] = useState<UsuarioManual | null>(null);
+  const [currentUser, setCurrentUser] = useState<UsuarioManual | null>(() => {
+    const saved = localStorage.getItem('seebc_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   const [authChecking, setAuthChecking] = useState(true);
 
   // --- Estados de Datos ---
@@ -204,10 +214,10 @@ export default function App() {
 
   // --- Lógica de Auth ---
   useEffect(() => {
-    // 1. Escuchar cambios en la sesión de Supabase
+    // 1. Escuchar cambios en la sesión de Supabase Auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        // Al obtener sesión, buscamos el perfil extendido (rol, etc) en public.usuarios
+        // Al obtener sesión de Supabase Auth, buscamos el perfil extendido (rol, etc) en public.usuarios
         const { data: profile } = await supabase
           .from('usuarios')
           .select('*')
@@ -220,8 +230,16 @@ export default function App() {
           localStorage.setItem('seebc_user', JSON.stringify(userWithProfile));
         }
       } else {
-        setCurrentUser(null);
-        localStorage.removeItem('seebc_user');
+        // Si no hay sesión de Supabase Auth, preservar sesión de usuario de la tabla pública si existe en localStorage
+        const saved = localStorage.getItem('seebc_user');
+        if (saved) {
+          try {
+            setCurrentUser(JSON.parse(saved));
+          } catch (e) {
+            setCurrentUser(null);
+            localStorage.removeItem('seebc_user');
+          }
+        }
       }
       setAuthChecking(false);
     });
@@ -238,8 +256,8 @@ export default function App() {
   }, []);
 
   const handleLoginSuccess = async (user: any) => {
-    // La sesión la maneja ahora onAuthStateChange de forma centralizada
     setCurrentUser(user);
+    localStorage.setItem('seebc_user', JSON.stringify(user));
     toast.success('Bienvenido, ' + (user.nombre_completo || user.usuario));
     
     try {
@@ -2555,11 +2573,13 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
     setLoading(true);
     setErrorMsg(null);
 
+    const cleanUsuario = usuario.toLowerCase().trim();
+
     try {
-      // 1. Intentar Login con Supabase Auth (Normal)
-      const email = usuario.includes('@') ? usuario : `${usuario.toLowerCase().trim()}@seebc.com`;
       let authSuccess = false;
 
+      // 1. Intentar Login con Supabase Auth (para usuarios con registro en auth.users)
+      const email = cleanUsuario.includes('@') ? cleanUsuario : `${cleanUsuario}@seebc.com`;
       try {
         const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
           email,
@@ -2567,27 +2587,46 @@ function Login({ onLoginSuccess }: { onLoginSuccess: (user: any) => void }) {
         });
 
         if (!authError && user) {
-          authSuccess = true;
-          const { data: profile } = await // Fallback bcrypt validation removed – Supabase Auth handles authentication fully.
-            supabase
+          const { data: profile } = await supabase
             .from('usuarios')
             .select('*')
             .eq('user_id', user.id)
             .single();
 
           if (profile) {
-            toast.success(`Bienvenido, ${profile.nombre_completo || profile.usuario}`);
+            authSuccess = true;
             onLoginSuccess(profile);
             return;
           }
         }
       } catch (authErr) {
-// Fallback bcrypt validation removed – Supabase Auth handles authentication fully.
+        console.warn('Supabase Auth error, intentando fallback RPC:', authErr);
+      }
+
+      // 2. FALLBACK SEGURO: Validación contra la tabla `usuarios` vía RPC `validate_login`
+      // Requerido para usuarios creados mediante la interfaz de administración (manage_user_secure)
+      if (!authSuccess) {
+        const { data: profile, error: rpcError } = await supabase.rpc('validate_login', {
+          p_usuario: cleanUsuario,
+          p_contrasena: password
+        });
+
+        if (rpcError || !profile) {
+          const delay = Math.floor(Math.random() * (1000 - 400 + 1)) + 400;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          throw new Error(rpcError?.message || 'Usuario o contraseña incorrectos');
+        }
+
+        onLoginSuccess(profile);
+        return;
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setErrorMsg(err.message || 'Error al iniciar sesión');
-      toast.error(err.message || 'Error al iniciar sesión');
+      const msg = (err.message === 'Credenciales no validas' || err.message === 'Credenciales no válidas')
+        ? 'Usuario o contraseña incorrectos'
+        : (err.message || 'Error al iniciar sesión');
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
