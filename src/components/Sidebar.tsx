@@ -159,9 +159,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <item.Icon className="w-4 h-4 text-surface-500 group-hover:text-inst-400 transition-colors" />
                         <span className={`${!isOpen ? 'hidden lg:inline' : 'animate-fade-in'}`}>{item.label}</span>
                       </div>
-                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${!isOpen ? 'hidden lg:block' : ''} ${isGroupOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGroupOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    {isOpen && isGroupOpen && (
+                    {isGroupOpen && (
                       <div className="space-y-1 pl-4 border-l border-surface-800 ml-5 mt-1">
                         {item.subItems?.map((sub) => (
                           <button

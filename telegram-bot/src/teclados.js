@@ -6,15 +6,33 @@ export const tecladoCompartirTelefono = new Keyboard()
   .resized()
   .oneTime();
 
-// ── Menú principal (inline) ────────────────────────────────────────────────
-export const menuPrincipal = new InlineKeyboard()
-  .text('📝 Nuevo Registro RG', 'menu_registro_rg')
-  .text('📝 Nuevo Registro RC', 'menu_registro_rc')
-  .row()
-  .text('👤 Reporte RG', 'menu_rg')
-  .text('🗳️ Reporte RC', 'menu_rc')
-  .row()
-  .text('📋 Mis reportes', 'menu_capturas');
+// ── Menú principal dinámico según rol ─────────────────────────────────────
+// rol: 'CAPTURISTA' → solo ve Reporte RG, Reporte RC y Mis reportes
+// otros roles (admin, coordinador, etc.) → menú completo con registros
+export function getMenuPrincipal(rol) {
+  const rolUpper = (rol || '').toUpperCase();
+  const isCapturista = rolUpper === 'CAPTURISTA';
+
+  const kb = new InlineKeyboard();
+
+  if (!isCapturista) {
+    // Administradores / coordinadores: pueden registrar nuevos RG/RC
+    kb.text('📝 Nuevo Registro RG', 'menu_registro_rg')
+      .text('📝 Nuevo Registro RC', 'menu_registro_rc')
+      .row();
+  }
+
+  // Todos los roles ven las opciones de reporte y capturas
+  kb.text('👤 Reporte RG', 'menu_rg')
+    .text('🗳️ Reporte RC', 'menu_rc')
+    .row()
+    .text('📋 Mis reportes', 'menu_capturas');
+
+  return kb;
+}
+
+// Alias para compatibilidad: menú completo (sin filtro de rol)
+export const menuPrincipal = getMenuPrincipal('ADMIN');
 
 // ── Confirmación genérica ──────────────────────────────────────────────────
 export function tecladoConfirmar(prefijo) {

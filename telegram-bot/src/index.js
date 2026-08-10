@@ -10,7 +10,7 @@ import {
   registrarAccesoBot,
 } from './db.js';
 import { authMiddleware } from './middleware.js';
-import { tecladoCompartirTelefono, menuPrincipal } from './teclados.js';
+import { tecladoCompartirTelefono, getMenuPrincipal } from './teclados.js';
 import { conversacionRG } from './conversations/captura_rg.js';
 import { conversacionRC } from './conversations/captura_rc.js';
 import { conversacionRegistroRG } from './conversations/registro_rg.js';
@@ -82,7 +82,7 @@ bot.command('start', async (ctx) => {
       await ctx.reply(
         `¡Bienvenido de vuelta, *${miembro.nombre_completo || miembro.usuario}*! 👋\n\n` +
           '¿Qué deseas hacer?',
-        { parse_mode: 'Markdown', reply_markup: menuPrincipal }
+        { parse_mode: 'Markdown', reply_markup: getMenuPrincipal(miembro.rol) }
       );
       return;
     }
@@ -164,7 +164,7 @@ bot.on('message:contact', async (ctx) => {
     // Mostrar menú principal
     await ctx.reply(
       '¿Qué deseas capturar?',
-      { reply_markup: menuPrincipal }
+      { reply_markup: getMenuPrincipal(ctx.miembro?.rol) }
     );
   } catch (err) {
     console.error('Error en verificación:', err.message);
@@ -212,7 +212,7 @@ protegido.use(authMiddleware);
 
 // ── /capturar — Menú principal ─────────────────────────────────────────────
 protegido.command('capturar', async (ctx) => {
-  await ctx.reply('¿Qué deseas capturar?', { reply_markup: menuPrincipal });
+  await ctx.reply('¿Qué deseas capturar?', { reply_markup: getMenuPrincipal(ctx.miembro?.rol) });
 });
 
 // ── /captura_general ───────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ protegido.command('mis_capturas', async (ctx) => {
 // ── /cancelar — Salir de conversación activa ───────────────────────────────
 protegido.command('cancelar', async (ctx) => {
   await ctx.conversation.exit();
-  await ctx.reply('❌ Operación cancelada.', { reply_markup: menuPrincipal });
+  await ctx.reply('❌ Operación cancelada.', { reply_markup: getMenuPrincipal(ctx.miembro?.rol) });
 });
 
 // ── /salir — Mensaje de despedida al cerrar la interacción
@@ -295,11 +295,19 @@ protegido.callbackQuery('menu_rc', async (ctx) => {
 
 protegido.callbackQuery('menu_registro_rg', async (ctx) => {
   await ctx.answerCallbackQuery();
+  const rol = (ctx.miembro?.rol || '').toUpperCase();
+  if (rol === 'CAPTURISTA') {
+    return ctx.reply('⛔ No tienes permiso para registrar nuevos RG. Usa las opciones de reporte.');
+  }
   await ctx.conversation.enter('registro_rg');
 });
 
 protegido.callbackQuery('menu_registro_rc', async (ctx) => {
   await ctx.answerCallbackQuery();
+  const rol = (ctx.miembro?.rol || '').toUpperCase();
+  if (rol === 'CAPTURISTA') {
+    return ctx.reply('⛔ No tienes permiso para registrar nuevos RC. Usa las opciones de reporte.');
+  }
   await ctx.conversation.enter('registro_rc');
 });
 
@@ -325,7 +333,7 @@ protegido.callbackQuery('menu_capturas', async (ctx) => {
     });
   }
 
-  await ctx.reply(texto, { parse_mode: 'Markdown', reply_markup: menuPrincipal });
+  await ctx.reply(texto, { parse_mode: 'Markdown', reply_markup: getMenuPrincipal(ctx.miembro?.rol) });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
