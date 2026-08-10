@@ -28,10 +28,10 @@ export default function LoginLogs({ currentUser }: LoginLogsProps) {
     setLoading(true);
     try {
       const { data, error } = await supabase
-  .from('login_logs')
-  .select('id, usuario_id, fuente, fecha_hora, usuarios(nombre_usuario)')
-  .order('fecha_hora', { ascending: false })
-  .limit(100);
+      .from('login_logs')
+      .select('id, usuario_id, nombre_usuario, fuente, fecha_hora')
+      .order('fecha_hora', { ascending: false })
+      .limit(100);
 
       if (error) throw error;
       setLogs(data || []);
