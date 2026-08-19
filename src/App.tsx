@@ -320,9 +320,13 @@ export default function App() {
     const capturistaFilterId = isAdminUser ? null : currentUser.id;
 
     try {
-      // 1. Cargar Usuarios
-      const { data: usersData } = await supabase.from('usuarios').select('*');
-      if (usersData) setUsuarios(usersData);
+      // 1. Cargar Usuarios (Solo para Administradores)
+      if (isAdminUser) {
+        const { data: usersData } = await supabase.from('usuarios').select('*');
+        if (usersData) setUsuarios(usersData);
+      } else {
+        setUsuarios([]);
+      }
 
       // 2. Cargar Catálogos
       const [dfRes, dlRes, munRes, secData] = await Promise.all([
@@ -2377,7 +2381,7 @@ export default function App() {
             )}
 
             {/* ============ USUARIOS MGMT ============ */}
-            {activeTab === 'usuarios_mgmt' && (
+            {activeTab === 'usuarios_mgmt' && (String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') && (
               <div className="space-y-8 animate-fade-in-up">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                   <div>
