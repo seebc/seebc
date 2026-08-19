@@ -274,16 +274,22 @@ export default function App() {
   useSessionTimeout(handleLogout, !!currentUser);
 
   // --- Carga de Datos con Paginación ---
-  const fetchAllFromTable = async (tableName: keyof Database['public']['Tables'], batchSize = 1000) => {
+  const fetchAllFromTable = async (tableName: keyof Database['public']['Tables'], batchSize = 1000, filterCapturistaId?: number | null) => {
     let allData: any[] = [];
     let from = 0;
     let to = batchSize - 1;
     let hasMore = true;
 
     while (hasMore) {
-      const { data, error } = await supabase
+      let query = supabase
         .from(tableName)
-        .select('*')
+        .select('*');
+
+      if (filterCapturistaId != null && ['rg', 'rc', 'rutas'].includes(tableName)) {
+        query = query.eq('capturista_id', filterCapturistaId) as any;
+      }
+
+      const { data, error } = await query
         .range(from, to)
         .order(
           tableName === 'rutas' ? 'nombre_ruta' : tableName === 'casillas' ? 'casilla' : tableName === 'secciones' ? 'id' : 'nombre',
@@ -310,6 +316,9 @@ export default function App() {
     if (!currentUser) return;
     setIsLoading(true);
 
+    const isAdminUser = String(currentUser.rol) === '1' || currentUser.rol === 'ADMIN';
+    const capturistaFilterId = isAdminUser ? null : currentUser.id;
+
     try {
       // 1. Cargar Usuarios
       const { data: usersData } = await supabase.from('usuarios').select('*');
@@ -330,9 +339,9 @@ export default function App() {
 
       // 3. Cargar Datos Operativos con Paginación para romper el límite de 1000
       const [rgData, rcData, rutasData, casData] = await Promise.all([
-        fetchAllFromTable('rg'),
-        fetchAllFromTable('rc'),
-        fetchAllFromTable('rutas'),
+        fetchAllFromTable('rg', 1000, capturistaFilterId),
+        fetchAllFromTable('rc', 1000, capturistaFilterId),
+        fetchAllFromTable('rutas', 1000, capturistaFilterId),
         fetchAllFromTable('casillas')
       ]);
 

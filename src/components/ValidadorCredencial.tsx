@@ -2,6 +2,7 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { supabase } from '../supabaseClient';
 
 interface ValidadorCredencialProps {
   tipo: 'rg' | 'rc';
@@ -34,7 +35,7 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
 }) => {
   const isRG = tipo === 'rg';
 
-  const handleValidarClave = () => {
+  const handleValidarClave = async () => {
     const claveSanitizada = credencialValidacion.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
     if (claveSanitizada.length !== 18) {
       toast.error('La clave de elector debe tener exactamente 18 caracteres alfanuméricos');
@@ -45,7 +46,7 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
     const rgConTipo = representantesGenerales.map(r => ({ ...r, tipoRegistro: 'rg' }));
     const rcConTipo = representantesCasilla.map(r => ({ ...r, tipoRegistro: 'rc' }));
 
-    const encontrada = [...rgConTipo, ...rcConTipo].find(r => {
+    let encontrada = [...rgConTipo, ...rcConTipo].find(r => {
       const dbClave = (r.clave_elector || '').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
       if (dbClave !== claveSanitizada) return false;
 
@@ -57,6 +58,22 @@ const ValidadorCredencial: React.FC<ValidadorCredencialProps> = ({
       }
       return true;
     });
+
+    if (!encontrada) {
+      try {
+        const [rgCheck, rcCheck] = await Promise.all([
+          supabase.from('rg').select('id, nombre, apellido_paterno, clave_elector').ilike('clave_elector', claveSanitizada).maybeSingle(),
+          supabase.from('rc').select('id, nombre, apellido_paterno, casilla_id, clave_elector').ilike('clave_elector', claveSanitizada).maybeSingle()
+        ]);
+        if (rgCheck.data && !(isRG && String(rgCheck.data.id) === String(editingRgId))) {
+          encontrada = { ...rgCheck.data, tipoRegistro: 'rg' };
+        } else if (rcCheck.data && !(!isRG && String(rcCheck.data.id) === String(editingRcId))) {
+          encontrada = { ...rcCheck.data, tipoRegistro: 'rc' };
+        }
+      } catch (err) {
+        console.error("Error al consultar clave en Supabase:", err);
+      }
+    }
 
     if (encontrada) {
       setCredencialEncontrada(encontrada);
