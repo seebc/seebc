@@ -286,7 +286,7 @@ export default function App() {
         .select('*');
 
       if (filterCapturistaId != null && ['rg', 'rc', 'rutas'].includes(tableName)) {
-        query = query.eq('capturista_id', filterCapturistaId) as any;
+        query = (query as any).eq('capturista_id', filterCapturistaId);
       }
 
       const { data, error } = await query

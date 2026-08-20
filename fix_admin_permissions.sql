@@ -1,54 +1,9 @@
 -- =====================================================================
--- MIGRACIÓN: Parche de Seguridad v4 (Corrección de RLS y Passwords)
--- Ejecutar en Supabase SQL Editor
+-- FIX: Permisos de Administrador para Edición de RG y RC
+-- Ejecutar este script en el Editor SQL de Supabase
 -- =====================================================================
 
--- 1. Habilitar la extensión pgcrypto para encriptar contraseñas
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- 2. Encriptar contraseñas existentes (que no estén encriptadas)
--- NOTA: Esto asume que el usuario tiene 'password' en texto plano y no con un hash de bcrypt ($2a$...).
-UPDATE public.usuarios 
-SET contrasena = crypt(contrasena, gen_salt('bf'))
-WHERE contrasena NOT LIKE '$2a$%';
-
--- 3. Actualizar la función de validación de Login para usar hashes (pgcrypto)
-DROP FUNCTION IF EXISTS public.validate_login(text, text);
-CREATE OR REPLACE FUNCTION public.validate_login(p_usuario text, p_contrasena text)
-RETURNS jsonb AS $$
-DECLARE
-    v_user jsonb;
-BEGIN
-    -- Validamos el usuario contra la base de datos usando crypt
-    SELECT to_jsonb(u.*) INTO v_user
-    FROM public.usuarios u
-    WHERE LOWER(u.usuario) = LOWER(p_usuario)
-      AND u.contrasena = crypt(p_contrasena, u.contrasena);
-
-    IF v_user IS NULL THEN
-        RAISE EXCEPTION 'Credenciales no validas';
-    END IF;
-
-    RETURN v_user;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 4. Arreglar Políticas RLS Peligrosas (Quitar el permiso global para Anon)
--- Borramos las políticas "Allow all for authenticated and anon"
-DROP POLICY IF EXISTS "Allow all for authenticated and anon" ON public.rg;
-DROP POLICY IF EXISTS "Allow all for authenticated and anon" ON public.rc;
-DROP POLICY IF EXISTS "Allow all for authenticated and anon" ON public.rutas;
-DROP POLICY IF EXISTS "Allow all for authenticated and anon" ON public.casillas;
-
--- Creamos políticas restrictivas que SÓLO permiten leer a usuarios anónimos (si es requerido por la UI pública)
--- Pero NO podrán modificar nada.
-CREATE POLICY "Allow read for anon" ON public.rg FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow read for anon" ON public.rc FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow read for anon" ON public.rutas FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow read for anon" ON public.casillas FOR SELECT TO anon USING (true);
-
--- 5. Parchear Insecure Direct Object Reference (IDOR) en Funciones RPC
--- Función helper para saber si un usuario es administrador (soporta 1, '1', 'ADMIN', 'admin')
+-- 1. Actualizar la función is_admin con el nombre de parámetro original (p_user_id)
 CREATE OR REPLACE FUNCTION public.is_admin(p_user_id integer) RETURNS boolean AS $$
 DECLARE
   v_rol text;
@@ -59,7 +14,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Securizamos save_rg_secure
+-- 2. Actualizar save_rg_secure (sin columna inexistente municipio_id)
 CREATE OR REPLACE FUNCTION public.save_rg_secure(p_id integer, p_payload jsonb)
 RETURNS jsonb AS $$
 DECLARE
@@ -74,7 +29,7 @@ BEGIN
   IF p_id IS NOT NULL AND p_id > 0 THEN
     SELECT capturista_id INTO v_owner_id FROM public.rg WHERE id = p_id;
     
-    -- VALIDACIÓN IDOR: Si no eres el dueño del registro y tampoco eres admin, rechazamos
+    -- VALIDACIÓN: Si no eres el capturista original y tampoco eres admin, se rechaza
     IF v_caller_id IS NULL OR (v_owner_id IS NOT NULL AND v_owner_id != v_caller_id AND NOT v_is_admin) THEN
       RAISE EXCEPTION 'No tienes permiso para editar este registro.';
     END IF;
@@ -125,7 +80,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Securizamos save_rc_secure
+-- 3. Actualizar save_rc_secure (sin columna inexistente municipio_id)
 CREATE OR REPLACE FUNCTION public.save_rc_secure(p_id integer, p_payload jsonb)
 RETURNS jsonb AS $$
 DECLARE
@@ -140,7 +95,7 @@ BEGIN
   IF p_id IS NOT NULL AND p_id > 0 THEN
     SELECT capturista_id INTO v_owner_id FROM public.rc WHERE id = p_id;
     
-    -- VALIDACIÓN IDOR: Si no eres el dueño del registro y tampoco eres admin, rechazamos
+    -- VALIDACIÓN: Si no eres el capturista original y tampoco eres admin, se rechaza
     IF v_caller_id IS NULL OR (v_owner_id IS NOT NULL AND v_owner_id != v_caller_id AND NOT v_is_admin) THEN
       RAISE EXCEPTION 'No tienes permiso para editar este registro.';
     END IF;
@@ -193,51 +148,3 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- =====================================================================
--- 6. Políticas RLS de visibilidad
--- Nota: el proyecto usa autenticación propia (no Supabase Auth),
--- por eso usamos current_setting('jwt.claims.user_id') en lugar de auth.uid()
--- =====================================================================
-
--- Solo administradores pueden ver los logs de login
-DROP POLICY IF EXISTS "Allow public select" ON public.login_logs;
-CREATE POLICY "Admins can read login logs" ON public.login_logs
-FOR SELECT
-USING (is_admin(current_setting('jwt.claims.user_id', true)::int));
-
--- Cada usuario solo puede leer los RC que él mismo capturó (admins ven todo)
-DROP POLICY IF EXISTS "Allow read for anon" ON public.rc;
-CREATE POLICY "Owner or admin can read rc" ON public.rc
-FOR SELECT
-USING (
-  capturista_id = current_setting('jwt.claims.user_id', true)::int
-  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
-);
-
--- Cada usuario solo puede leer los RG que él mismo capturó (admins ven todo)
-DROP POLICY IF EXISTS "Allow read for anon" ON public.rg;
-CREATE POLICY "Owner or admin can read rg" ON public.rg
-FOR SELECT
-USING (
-  capturista_id = current_setting('jwt.claims.user_id', true)::int
-  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
-);
-
--- Cada usuario solo puede leer las Rutas que él mismo capturó (admins ven todo)
-DROP POLICY IF EXISTS "Allow read for anon" ON public.rutas;
-CREATE POLICY "Owner or admin can read rutas" ON public.rutas
-FOR SELECT
-USING (
-  capturista_id = current_setting('jwt.claims.user_id', true)::int
-  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
-);
-
--- Cada usuario solo puede leer las Casillas que él mismo capturó (admins ven todo)
-DROP POLICY IF EXISTS "Allow read for anon" ON public.casillas;
-CREATE POLICY "Owner or admin can read casillas" ON public.casillas
-FOR SELECT
-USING (
-  capturista_id = current_setting('jwt.claims.user_id', true)::int
-  OR is_admin(current_setting('jwt.claims.user_id', true)::int)
-);

@@ -184,7 +184,6 @@ export async function conversacionRegistroRC(conversation, ctx) {
       cic: cic.toUpperCase().trim().replace(/[^A-Z0-9]/g, ''),
       telefono: telefono.replace(/\D/g, '').slice(0, 10),
       correo_electronico: correo_electronico !== '-' ? correo_electronico.toLowerCase().trim() : null,
-      municipio_id,
       df_id,
       dl_id,
       seccion_id,

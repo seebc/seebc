@@ -87,7 +87,7 @@ export async function verificarClaveElectorExistente(clave) {
 
 export async function getMunicipios() {
   const supabase = getClient();
-  const { data, error } = await supabase.from('municipios').select('id, nombre').order('id');
+  const { data, error } = await supabase.from('municipios').select('id, municipio').order('id');
   if (error) throw error;
   return data;
 }
