@@ -78,9 +78,25 @@ const Header: React.FC<HeaderProps> = ({
           <div className="w-8 h-8 bg-inst-100 rounded-lg flex items-center justify-center text-sm font-bold text-inst-700">
             {currentUser?.usuario?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <div className="hidden lg:block">
-            <p className="text-sm font-semibold text-surface-800 leading-none">{currentUser?.usuario || 'Invitado'}</p>
-            <p className="text-[11px] text-surface-400 mt-0.5">{(String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') ? 'Administrador' : 'Capturista'}</p>
+          <div className="hidden lg:block text-left">
+            <p className="text-sm font-semibold text-surface-800 leading-none">{currentUser?.nombre_completo || currentUser?.usuario || 'Invitado'}</p>
+            <p className="text-[11px] font-medium text-inst-600 mt-0.5">
+              {(() => {
+                const rol = String(currentUser?.rol || '').toUpperCase();
+                if (rol === '1' || rol === 'ADMIN') return 'Administrador (Estatal)';
+                if (rol === 'ESTATAL' || rol === '2' || rol === 'CAPTURISTA') {
+                  if (rol === 'ESTATAL' || rol === '2') return 'Operador Estatal';
+                  return 'Capturista';
+                }
+                if (rol === 'MUNICIPAL') {
+                  return `Municipal · ${currentUser?.nombre_municipio || `Mun. #${currentUser?.municipio_id || ''}`}`;
+                }
+                if (rol === 'DISTRITAL') {
+                  return `Distrital · DL ${currentUser?.numero_dl || currentUser?.dl_id || ''}`;
+                }
+                return rol;
+              })()}
+            </p>
           </div>
         </div>
       </div>

@@ -188,8 +188,10 @@ export default function App() {
     usuario: '',
     nombre_completo: '',
     password: '',
-    rol: 'CAPTURISTA' as 'ADMIN' | 'CAPTURISTA',
-    telefono: ''
+    rol: 'ESTATAL' as string,
+    telefono: '',
+    municipio_id: '',
+    dl_id: ''
   });
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [showUserPassword, setShowUserPassword] = useState(false);
@@ -230,11 +232,29 @@ export default function App() {
           localStorage.setItem('seebc_user', JSON.stringify(userWithProfile));
         }
       } else {
-        // Si no hay sesión de Supabase Auth, preservar sesión de usuario de la tabla pública si existe en localStorage
+        // CRIT-03: Re-validar perfil desde BD para evitar manipulación de localStorage
         const saved = localStorage.getItem('seebc_user');
         if (saved) {
           try {
-            setCurrentUser(JSON.parse(saved));
+            const parsed = JSON.parse(saved);
+            if (parsed?.id) {
+              const { data: freshProfile, error } = await supabase
+                .from('usuarios')
+                .select('*')
+                .eq('id', parsed.id)
+                .single();
+
+              if (freshProfile && !error) {
+                setCurrentUser(freshProfile);
+                localStorage.setItem('seebc_user', JSON.stringify(freshProfile));
+              } else {
+                setCurrentUser(null);
+                localStorage.removeItem('seebc_user');
+              }
+            } else {
+              setCurrentUser(null);
+              localStorage.removeItem('seebc_user');
+            }
           } catch (e) {
             setCurrentUser(null);
             localStorage.removeItem('seebc_user');
@@ -316,8 +336,8 @@ export default function App() {
     if (!currentUser) return;
     setIsLoading(true);
 
-    const isAdminUser = String(currentUser.rol) === '1' || currentUser.rol === 'ADMIN';
-    const capturistaFilterId = isAdminUser ? null : currentUser.id;
+    const userRol = String(currentUser.rol || '').toUpperCase();
+    const isAdminUser = userRol === '1' || userRol === 'ADMIN';
 
     try {
       // 1. Cargar Usuarios (Solo para Administradores)
@@ -343,9 +363,9 @@ export default function App() {
 
       // 3. Cargar Datos Operativos con Paginación para romper el límite de 1000
       const [rgData, rcData, rutasData, casData] = await Promise.all([
-        fetchAllFromTable('rg', 1000, capturistaFilterId),
-        fetchAllFromTable('rc', 1000, capturistaFilterId),
-        fetchAllFromTable('rutas', 1000, capturistaFilterId),
+        fetchAllFromTable('rg', 1000),
+        fetchAllFromTable('rc', 1000),
+        fetchAllFromTable('rutas', 1000),
         fetchAllFromTable('casillas')
       ]);
 
@@ -375,19 +395,32 @@ export default function App() {
     setCredencialEncontrada(null);
     setCasillaSearch('');
     setSearchTerm('');
+    const userRol = String(currentUser?.rol || '').toUpperCase();
+    const isAdmin = userRol === '1' || userRol === 'ADMIN';
+    const isMunicipal = userRol === 'MUNICIPAL';
+    const isDistrital = userRol === 'DISTRITAL';
+
+    if ((tabId === 'usuarios_mgmt' || tabId === 'logs') && !isAdmin) {
+      toast.error('No tienes permisos de administrador para acceder a este módulo');
+      return;
+    }
+
     setActiveTab(tabId as any);
+
+    const defaultMun = isMunicipal && currentUser?.municipio_id ? String(currentUser.municipio_id) : '';
+    const defaultDl = isDistrital && currentUser?.dl_id ? String(currentUser.dl_id) : '';
 
     if (tabId === 'generales') {
       setRgForm({
         nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
-        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', credencial_vigente: true, es_militante: false,
+        municipio_id: defaultMun, df_id: '', dl_id: defaultDl, seccion_id: '', credencial_vigente: true, es_militante: false,
         calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
         autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
       });
     } else if (tabId === 'casilla') {
       setRcForm({
         nombre: '', apellido_paterno: '', apellido_materno: '', clave_elector: '', numero_credencial: '', cic: '',
-        municipio_id: '', df_id: '', dl_id: '', seccion_id: '', casilla_id: '',
+        municipio_id: defaultMun, df_id: '', dl_id: defaultDl, seccion_id: '', casilla_id: '',
         tipo_nombramiento: 'PROPIETARIO 1' as any, credencial_vigente: true, es_militante: false,
         calle: '', num_ext: '', num_int: '', colonia: '', codigo_postal: '', telefono: '', correo_electronico: '',
         autoriza_propaganda: false, tipo_propaganda: 'Ninguno' as any, firma_capturada: false
@@ -398,17 +431,28 @@ export default function App() {
           nombre_ruta: '', 
           representante_general_id: '', 
           df_id: '', 
-          dl_id: '', 
+          dl_id: defaultDl, 
           casillas_asignada: [],
-          municipio_id: ''
+          municipio_id: defaultMun
+        });
+      }
+    } else if (tabId === 'casillas_form') {
+      if (!editingCasillaIntId) {
+        setCasillaMgmtForm({
+          casilla_id: '',
+          casilla: '',
+          df_id: '',
+          dl_id: defaultDl,
+          municipio_id: defaultMun,
+          ubicación: ''
         });
       }
     } else if (tabId === 'usuarios_mgmt') {
       setEditingUserId(null);
-      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA', telefono: '' });
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'ESTATAL', telefono: '', municipio_id: '', dl_id: '' });
       setShowUserPassword(false);
     }
-  }, [editingRutaId]);
+  }, [editingRutaId, editingCasillaIntId, currentUser]);
 
   useEffect(() => {
     fetchData();
@@ -439,13 +483,15 @@ export default function App() {
       const sanitizedKey = payload.clave_elector.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
       const sanitizedPhone = payload.telefono ? payload.telefono.replace(/\D/g, '').slice(0,10) : null;
 
+      const finalDlId = isDistritalUser && user.dl_id ? Number(user.dl_id) : parseInt(payload.dl_id);
+
       const dataToSave = {
         ...payload,
         clave_elector: sanitizedKey,
         telefono: sanitizedPhone,
         correo_electronico: payload.correo_electronico?.toLowerCase().trim() || null,
         df_id: parseInt(payload.df_id),
-        dl_id: parseInt(payload.dl_id),
+        dl_id: finalDlId,
         seccion_id: parseInt(payload.seccion_id) || 0,
         capturista_id: user.id // Forzado
       };
@@ -475,9 +521,9 @@ export default function App() {
     setRgForm({
       nombre: rg.nombre, apellido_paterno: rg.apellido_paterno, apellido_materno: rg.apellido_materno || '',
       clave_elector: rg.clave_elector, numero_credencial: rg.numero_credencial || '', cic: rg.cic || '',
-      municipio_id: rg.municipio_id ? String(rg.municipio_id) : '', 
+      municipio_id: rg.municipio_id ? String(rg.municipio_id) : (isMunicipalUser && currentUser?.municipio_id ? String(currentUser.municipio_id) : ''), 
       df_id: rg.df_id ? String(rg.df_id) : '', 
-      dl_id: rg.dl_id ? String(rg.dl_id) : '', 
+      dl_id: rg.dl_id ? String(rg.dl_id) : (isDistritalUser && currentUser?.dl_id ? String(currentUser.dl_id) : ''), 
       seccion_id: rg.seccion_id ? String(rg.seccion_id) : '',
       credencial_vigente: rg.credencial_vigente, es_militante: rg.es_militante,
       calle: rg.calle || '', num_ext: rg.num_ext || '', num_int: rg.num_int || '', colonia: rg.colonia || '', 
@@ -491,6 +537,10 @@ export default function App() {
   };
 
   const handleDeleteRg = async (id: number) => {
+    if (!canDeleteRecords) {
+      toast.error('Tu rol no tiene permisos para eliminar registros');
+      return;
+    }
     // Verificar dependencias: ¿tiene rutas asignadas?
     const rutasAsociadas = rutas.filter(r => String(r.representante_general_id) === String(id));
     if (rutasAsociadas.length > 0) {
@@ -525,6 +575,8 @@ export default function App() {
       const sanitizedKey = payload.clave_elector.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
       const sanitizedPhone = payload.telefono ? payload.telefono.replace(/\D/g, '').slice(0,10) : null;
 
+      const finalDlId = isDistritalUser && user.dl_id ? Number(user.dl_id) : parseInt(payload.dl_id);
+
       const dataToSave = {
         ...payload,
         clave_elector: sanitizedKey,
@@ -532,7 +584,7 @@ export default function App() {
         correo_electronico: payload.correo_electronico?.toLowerCase().trim() || null,
         casilla_id: payload.casilla_id ? parseInt(payload.casilla_id) : null,
         df_id: parseInt(payload.df_id),
-        dl_id: parseInt(payload.dl_id),
+        dl_id: finalDlId,
         seccion_id: parseInt(payload.seccion_id) || 0,
         capturista_id: user.id // Forzado
       };
@@ -564,9 +616,9 @@ export default function App() {
     setRcForm({
       nombre: rc.nombre, apellido_paterno: rc.apellido_paterno, apellido_materno: rc.apellido_materno || '',
       clave_elector: rc.clave_elector, numero_credencial: rc.numero_credencial || '', cic: rc.cic || '',
-      municipio_id: casillaAsociada?.municipio ? String(casillaAsociada.municipio) : '', 
+      municipio_id: casillaAsociada?.municipio ? String(casillaAsociada.municipio) : (isMunicipalUser && currentUser?.municipio_id ? String(currentUser.municipio_id) : ''), 
       df_id: rc.df_id ? String(rc.df_id) : '', 
-      dl_id: rc.dl_id ? String(rc.dl_id) : '', 
+      dl_id: rc.dl_id ? String(rc.dl_id) : (isDistritalUser && currentUser?.dl_id ? String(currentUser.dl_id) : ''), 
       seccion_id: rc.seccion_id ? String(rc.seccion_id) : '',
       casilla_id: rc.casilla_id ? String(rc.casilla_id) : '', 
       tipo_nombramiento: rc.tipo_nombramiento || 'PROPIETARIO 1',
@@ -582,6 +634,10 @@ export default function App() {
   };
 
   const handleDeleteRc = async (id: number) => {
+    if (!canDeleteRecords) {
+      toast.error('Tu rol no tiene permisos para eliminar registros');
+      return;
+    }
     if (!confirm('¿Seguro que deseas eliminar este registro?')) return;
     try {
       const { error } = await supabase.from('rc').delete().eq('id', id);
@@ -599,12 +655,15 @@ export default function App() {
     const user = currentUser;
     if (!user) return;
     try {
+      const finalMunId = isMunicipalUser && user.municipio_id ? Number(user.municipio_id) : (rutaForm.municipio_id ? parseInt(rutaForm.municipio_id) : null);
+      const finalDlId = isDistritalUser && user.dl_id ? Number(user.dl_id) : parseInt(rutaForm.dl_id);
+
       const dataToSave = {
         nombre_ruta: rutaForm.nombre_ruta,
         df_id: rutaForm.df_id ? parseInt(rutaForm.df_id) : null,
-        dl_id: parseInt(rutaForm.dl_id),
+        dl_id: finalDlId,
         representante_general_id: rutaForm.representante_general_id ? parseInt(rutaForm.representante_general_id) : null,
-        municipio_id: rutaForm.municipio_id ? parseInt(rutaForm.municipio_id) : null,
+        municipio_id: finalMunId,
         casillas_asignada: rutaForm.casillas_asignada as any,
         capturista_id: user.id // Forzado
       };
@@ -624,9 +683,9 @@ export default function App() {
         nombre_ruta: '', 
         representante_general_id: '', 
         df_id: '', 
-        dl_id: '', 
+        dl_id: isDistritalUser && user.dl_id ? String(user.dl_id) : '', 
         casillas_asignada: [],
-        municipio_id: ''
+        municipio_id: isMunicipalUser && user.municipio_id ? String(user.municipio_id) : ''
       });
       fetchData();
       setActiveTab('rutas_list');
@@ -649,6 +708,10 @@ export default function App() {
   };
 
   const handleDeleteRuta = async (id: number) => {
+    if (!canDeleteRecords) {
+      toast.error('Tu rol no tiene permisos para eliminar registros');
+      return;
+    }
     if (!confirm('¿Seguro que deseas eliminar esta ruta?')) return;
     try {
       const { error } = await supabase.from('rutas').delete().eq('id', id);
@@ -666,11 +729,14 @@ export default function App() {
     const user = currentUser;
     if (!user) return;
     try {
+      const finalMunId = isMunicipalUser && user.municipio_id ? Number(user.municipio_id) : (casillaMgmtForm.municipio_id ? parseInt(casillaMgmtForm.municipio_id) : null);
+      const finalDlId = isDistritalUser && user.dl_id ? Number(user.dl_id) : (casillaMgmtForm.dl_id ? parseInt(casillaMgmtForm.dl_id) : null);
+
       const dataToSave: any = {
         casilla: casillaMgmtForm.casilla,
         df: casillaMgmtForm.df_id ? parseInt(casillaMgmtForm.df_id) : null,
-        dl: casillaMgmtForm.dl_id ? parseInt(casillaMgmtForm.dl_id) : null,
-        municipio: casillaMgmtForm.municipio_id ? parseInt(casillaMgmtForm.municipio_id) : null,
+        dl: finalDlId,
+        municipio: finalMunId,
         ubicación: casillaMgmtForm.ubicación ? casillaMgmtForm.ubicación.toUpperCase() : null,
         capturista_id: user.id // Forzado
       };
@@ -690,8 +756,8 @@ export default function App() {
         casilla_id: '',
         casilla: '',
         df_id: '',
-        dl_id: '',
-        municipio_id: '',
+        dl_id: isDistritalUser && user.dl_id ? String(user.dl_id) : '',
+        municipio_id: isMunicipalUser && user.municipio_id ? String(user.municipio_id) : '',
         ubicación: ''
       });
       fetchData();
@@ -715,6 +781,10 @@ export default function App() {
   };
 
   const handleDeleteCasilla = async (casilla_id: number) => {
+    if (!canDeleteRecords) {
+      toast.error('Tu rol no tiene permisos para eliminar registros');
+      return;
+    }
     // Verificar dependencias: ¿tiene RCs o rutas asignadas?
     const rcsAsociados = representantesCasilla.filter(rc => String(rc.casilla_id) === String(casilla_id));
     if (rcsAsociados.length > 0) {
@@ -747,6 +817,18 @@ export default function App() {
       toast.error('Nombre de usuario y contraseña son requeridos');
       return;
     }
+    if (userForm.rol === 'MUNICIPAL' && !userForm.municipio_id) {
+      toast.error('Debes seleccionar un municipio asignado');
+      return;
+    }
+    if (userForm.rol === 'DISTRITAL' && !userForm.dl_id) {
+      toast.error('Debes seleccionar un distrito local asignado');
+      return;
+    }
+    if (!currentUser?.id) {
+      toast.error('Sesión inválida. Por favor vuelve a iniciar sesión.');
+      return;
+    }
 
     try {
       const { error } = await supabase.rpc('manage_user_secure', {
@@ -755,13 +837,16 @@ export default function App() {
         in_password: userForm.password || '',
         in_rol: userForm.rol,
         in_nombre_completo: userForm.nombre_completo || '',
-        in_telefono: userForm.telefono ? userForm.telefono.replace(/\D/g, '').slice(0, 10) : ''
+        in_telefono: userForm.telefono ? userForm.telefono.replace(/\D/g, '').slice(0, 10) : '',
+        in_municipio_id: userForm.rol === 'MUNICIPAL' && userForm.municipio_id ? parseInt(userForm.municipio_id) : null,
+        in_dl_id: userForm.rol === 'DISTRITAL' && userForm.dl_id ? parseInt(userForm.dl_id) : null,
+        in_caller_id: currentUser.id  // CRIT-02: verificar en backend que el invocante es ADMIN
       });
       if (error) throw error;
 
       toast.success(editingUserId ? 'Usuario actualizado' : 'Usuario creado');
       setEditingUserId(null);
-      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'CAPTURISTA', telefono: '' });
+      setUserForm({ usuario: '', nombre_completo: '', password: '', rol: 'ESTATAL', telefono: '', municipio_id: '', dl_id: '' });
       fetchData();
     } catch (error: any) {
       handleSecurityError(error, 'Error al gestionar usuarios');
@@ -774,8 +859,10 @@ export default function App() {
       usuario: u.usuario,
       nombre_completo: u.nombre_completo || '',
       password: '', // No mostramos el hash
-      rol: (u.rol as any) || 'CAPTURISTA',
-      telefono: u.telefono || ''
+      rol: (u.rol as any) || 'ESTATAL',
+      telefono: u.telefono || '',
+      municipio_id: (u as any).municipio_id ? String((u as any).municipio_id) : '',
+      dl_id: (u as any).dl_id ? String((u as any).dl_id) : ''
     });
     setShowUserPassword(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -788,8 +875,13 @@ export default function App() {
     }
     if (!confirm('¿Seguro que deseas eliminar este usuario? Sus capturas quedarán sin autor asignado.')) return;
     try {
-      const { error } = await supabase.from('usuarios').delete().eq('id', id);
-      if (error) throw error;
+      // Intentar primero con RPC delete_user_secure
+      const { error: rpcError } = await (supabase.rpc as any)('delete_user_secure', { p_id: id });
+      if (rpcError) {
+        // Fallback a DELETE directo
+        const { error } = await supabase.from('usuarios').delete().eq('id', id);
+        if (error) throw error;
+      }
       toast.success('Usuario eliminado');
       fetchData();
     } catch (error: any) {
@@ -797,12 +889,76 @@ export default function App() {
     }
   };
 
-  // --- Cálculos de métricas ---
-  const idsCasillasConRepresentante = new Set(representantesCasilla.map(rc => rc.casilla_id));
-  const casillasCubiertas = casillas.filter(c => idsCasillasConRepresentante.has(c.casilla_id)).length;
-  const casillasSinCobertura = casillas.length - casillasCubiertas;
-  const rcGoal = casillas.length;
-  const rgGoal = Math.ceil(secciones.length / 10) || 0;
+  // --- Permisos y Filtros Territoriales de Usuario ---
+  const userRol = String(currentUser?.rol || '').toUpperCase();
+  const isAdminUser = userRol === '1' || userRol === 'ADMIN';
+  const isEstatalUser = isAdminUser || userRol === 'ESTATAL' || userRol === '2';
+  const isMunicipalUser = userRol === 'MUNICIPAL';
+  const isDistritalUser = userRol === 'DISTRITAL';
+  const canDeleteRecords = isEstatalUser;
+
+  // Filtrado de Casillas por territorio
+  const scopedCasillas = React.useMemo(() => {
+    if (isMunicipalUser && currentUser?.municipio_id) {
+      return casillas.filter(c => Number(c.municipio) === Number(currentUser.municipio_id));
+    }
+    if (isDistritalUser && currentUser?.dl_id) {
+      return casillas.filter(c => Number(c.dl) === Number(currentUser.dl_id));
+    }
+    return casillas;
+  }, [casillas, isMunicipalUser, isDistritalUser, currentUser]);
+
+  // Filtrado de RG por territorio
+  const scopedRG = React.useMemo(() => {
+    if (isMunicipalUser && currentUser?.municipio_id) {
+      return representantesGenerales.filter(rg => {
+        const sec = secciones.find(s => s.id === rg.seccion_id);
+        return (rg.municipio_id && Number(rg.municipio_id) === Number(currentUser.municipio_id)) || (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
+      });
+    }
+    if (isDistritalUser && currentUser?.dl_id) {
+      return representantesGenerales.filter(rg => Number(rg.dl_id) === Number(currentUser.dl_id));
+    }
+    return representantesGenerales;
+  }, [representantesGenerales, secciones, isMunicipalUser, isDistritalUser, currentUser]);
+
+  // Filtrado de RC por territorio
+  const scopedRC = React.useMemo(() => {
+    if (isMunicipalUser && currentUser?.municipio_id) {
+      return representantesCasilla.filter(rc => {
+        const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+        const sec = secciones.find(s => s.id === rc.seccion_id);
+        return (cas && Number(cas.municipio) === Number(currentUser.municipio_id)) || (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
+      });
+    }
+    if (isDistritalUser && currentUser?.dl_id) {
+      return representantesCasilla.filter(rc => Number(rc.dl_id) === Number(currentUser.dl_id));
+    }
+    return representantesCasilla;
+  }, [representantesCasilla, casillas, secciones, isMunicipalUser, isDistritalUser, currentUser]);
+
+  // Filtrado de Rutas por territorio
+  const scopedRutas = React.useMemo(() => {
+    if (isMunicipalUser && currentUser?.municipio_id) {
+      return rutas.filter(r => Number(r.municipio_id) === Number(currentUser.municipio_id));
+    }
+    if (isDistritalUser && currentUser?.dl_id) {
+      return rutas.filter(r => Number(r.dl_id) === Number(currentUser.dl_id));
+    }
+    return rutas;
+  }, [rutas, isMunicipalUser, isDistritalUser, currentUser]);
+
+  // --- Cálculos de métricas basados en el alcance territorial ---
+  const idsCasillasConRepresentante = new Set(scopedRC.map(rc => rc.casilla_id));
+  const casillasCubiertas = scopedCasillas.filter(c => idsCasillasConRepresentante.has(c.casilla_id)).length;
+  const casillasSinCobertura = scopedCasillas.length - casillasCubiertas;
+  const rcGoal = scopedCasillas.length;
+  const scopedSecciones = isMunicipalUser && currentUser?.municipio_id 
+    ? secciones.filter(s => Number(s.municipio_id) === Number(currentUser.municipio_id))
+    : isDistritalUser && currentUser?.dl_id
+    ? secciones.filter(s => Number(s.dl_id) === Number(currentUser.dl_id))
+    : secciones;
+  const rgGoal = Math.ceil(scopedSecciones.length / 10) || 0;
 
   if (authChecking) return null;
   if (!currentUser) return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -886,9 +1042,9 @@ export default function App() {
 
                 {/* Metric Cards */}
                 <DashboardStats 
-                  rgCount={representantesGenerales.length}
-                  rcCount={representantesCasilla.length}
-                  casillasCount={casillas.length}
+                  rgCount={scopedRG.length}
+                  rcCount={scopedRC.length}
+                  casillasCount={scopedCasillas.length}
                   casillasSinCobertura={casillasSinCobertura}
                   rgGoal={rgGoal}
                   rcGoal={rcGoal}
@@ -901,16 +1057,21 @@ export default function App() {
                   <div className="card overflow-hidden">
                     <div className="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
                       <div>
-                        <h3 className="font-semibold text-surface-800 text-sm">Cobertura por Municipio</h3>
+                        <h3 className="font-semibold text-surface-800 text-sm">
+                          {isMunicipalUser ? 'Cobertura de tu Municipio' : 'Cobertura por Municipio'}
+                        </h3>
                         <p className="text-xs text-surface-400 mt-0.5">Avance de estructura municipal</p>
                       </div>
                       <BarChart2 className="w-4 h-4 text-surface-300" />
                     </div>
                     <div className="p-6 space-y-4 max-h-[420px] overflow-y-auto">
-                      {municipios.map(m => {
-                        const casillasEnMun = casillas.filter(c => c.municipio === m.id);
-                        const casillasCubiertas = Array.from(new Set(representantesCasilla.filter(rc => {
-                          const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+                      {(isMunicipalUser && currentUser?.municipio_id 
+                        ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                        : municipios
+                      ).map(m => {
+                        const casillasEnMun = scopedCasillas.filter(c => c.municipio === m.id);
+                        const casillasCubiertas = Array.from(new Set(scopedRC.filter(rc => {
+                          const cas = scopedCasillas.find(c => c.casilla_id === rc.casilla_id);
                           return cas?.municipio === m.id;
                         }).map(rc => rc.casilla_id))).length;
                         const porc = casillasEnMun.length > 0 ? (casillasCubiertas / casillasEnMun.length) * 100 : 0;
@@ -952,8 +1113,8 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {casillas
-                            .filter(c => !representantesCasilla.some(rc => rc.casilla_id === c.casilla_id))
+                          {scopedCasillas
+                            .filter(c => !scopedRC.some(rc => rc.casilla_id === c.casilla_id))
                             .slice(0, 50)
                             .map(c => (
                               <tr key={c.casilla_id}>
@@ -978,9 +1139,10 @@ export default function App() {
                     </div>
                     <div className="p-6 space-y-6">
                       {distritosFederales.sort((a,b) => (a.df || 0) - (b.df || 0)).map(df => {
-                        const casillasEnDF = casillas.filter(c => c.df === df.id);
-                        const casillasCubiertas = Array.from(new Set(representantesCasilla.filter(rc => {
-                          const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
+                        // BUG-01: Usar scopedCasillas y scopedRC en lugar de las colecciones globales
+                        const casillasEnDF = scopedCasillas.filter(c => c.df === df.id);
+                        const casillasCubiertas = Array.from(new Set(scopedRC.filter(rc => {
+                          const cas = scopedCasillas.find(c => c.casilla_id === rc.casilla_id);
                           return cas?.df === df.id;
                         }).map(rc => rc.casilla_id))).length;
                         const porc = casillasEnDF.length > 0 ? (casillasCubiertas / casillasEnDF.length) * 100 : 0;
@@ -1074,9 +1236,9 @@ export default function App() {
                           }}
                         >
                           <option value="rg">General (RG)</option>
-                          <option value="municipio">Municipio</option>
-                          <option value="df">Distrito Federal (DF)</option>
-                          <option value="dl">Distrito Local (DL)</option>
+                          {!isDistritalUser && <option value="municipio">Municipio</option>}
+                          {!isMunicipalUser && !isDistritalUser && <option value="df">Distrito Federal (DF)</option>}
+                          {!isMunicipalUser && <option value="dl">Distrito Local (DL)</option>}
                         </select>
                       </div>
                       <div>
@@ -1087,16 +1249,24 @@ export default function App() {
                           onChange={(e) => setReporteOpValor(e.target.value)}
                         >
                           <option value="">— Elige una opción —</option>
-                          {reporteOpTipo === 'rg' && [...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => (
+                          {reporteOpTipo === 'rg' && [...scopedRG].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => (
                             <option key={rg.id} value={rg.id}>{`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}</option>
                           ))}
-                          {reporteOpTipo === 'municipio' && [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => (
+                          {reporteOpTipo === 'municipio' && (
+                            isMunicipalUser && currentUser?.municipio_id 
+                              ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                              : [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                          ).map(m => (
                             <option key={m.id} value={m.id}>{m.municipio}</option>
                           ))}
                           {reporteOpTipo === 'df' && [...distritosFederales].sort((a,b) => (a.df || 0) - (b.df || 0)).map(df => (
                             <option key={df.id} value={df.id}>Distrito Federal {df.df}</option>
                           ))}
-                          {reporteOpTipo === 'dl' && [...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(dl => (
+                          {reporteOpTipo === 'dl' && (
+                            isDistritalUser && currentUser?.dl_id 
+                              ? distritosLocales.filter(d => Number(d.id) === Number(currentUser.dl_id))
+                              : [...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0))
+                          ).map(dl => (
                             <option key={dl.id} value={dl.id}>Distrito Local {dl.dl}</option>
                           ))}
                         </select>
@@ -1112,7 +1282,7 @@ export default function App() {
                         <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-widest">Control de Estructura Electoral 2027</p>
                         <h3 className="text-xl font-bold text-surface-900">
                           {reporteOpTipo === 'rg' ? (() => {
-                            const rg = representantesGenerales.find(r => String(r.id) === reporteOpValor);
+                            const rg = scopedRG.find(r => String(r.id) === reporteOpValor);
                             return `RG: ${rg?.nombre || ''} ${rg?.apellido_paterno || ''} ${rg?.apellido_materno || ''}`.trim();
                           })() : 
                            reporteOpTipo === 'municipio' ? `Municipio: ${municipios.find(m => String(m.id) === reporteOpValor)?.municipio}` :
@@ -1138,10 +1308,10 @@ export default function App() {
                           </tr>
                        </thead>
                        <tbody>
-                          {casillas
+                          {scopedCasillas
                             .filter(c => {
                               if (reporteOpTipo === 'rg') {
-                                const ruta = rutas.find(r => 
+                                const ruta = scopedRutas.find(r => 
                                   Array.isArray(r.casillas_asignada) && 
                                   r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                 );
@@ -1154,15 +1324,15 @@ export default function App() {
                             })
                             .sort((a,b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, {numeric: true, sensitivity: 'base'}))
                             .flatMap(c => {
-                               const ruta = rutas.find(r => 
+                               const ruta = scopedRutas.find(r => 
                                  Array.isArray(r.casillas_asignada) && 
                                  r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                );
-                               const rg = ruta ? representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id)) : null;
+                               const rg = ruta ? scopedRG.find(r => String(r.id) === String(ruta.representante_general_id)) : null;
                                const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'SIN ASIGNAR';
 
                                const roles = ['PROPIETARIO 1', 'SUPLENTE 1', 'PROPIETARIO 2', 'SUPLENTE 2'];
-                               const rcsForCasilla = representantesCasilla.filter(rc => rc.casilla_id === c.casilla_id);
+                               const rcsForCasilla = scopedRC.filter(rc => rc.casilla_id === c.casilla_id);
 
                                return roles.map(role => {
                                  const rc = rcsForCasilla.find(r => r.tipo_nombramiento === role);
@@ -1186,9 +1356,9 @@ export default function App() {
                                  );
                                });
                             })}
-                          {casillas.filter(c => {
+                          {scopedCasillas.filter(c => {
                               if (reporteOpTipo === 'rg') {
-                                const ruta = rutas.find(r => 
+                                const ruta = scopedRutas.find(r => 
                                   Array.isArray(r.casillas_asignada) && 
                                   r.casillas_asignada.map(String).includes(String(c.casilla_id))
                                 );
@@ -1201,7 +1371,7 @@ export default function App() {
                           }).length === 0 && (
                             <tr>
                               <td colSpan={6} className="text-center py-12">
-                                 <p className="text-sm text-surface-400">Sin registros que coincidan con la selección</p>
+                                <p className="text-sm text-surface-400">Sin registros que coincidan con la selección en tu demarcación</p>
                               </td>
                             </tr>
                           )}
@@ -1228,10 +1398,12 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                   <div>
                     <h1 className="text-2xl font-bold text-surface-900">Representantes Generales</h1>
-                    <p className="text-surface-500 text-sm mt-1">Administración y seguimiento de la estructura capturada</p>
+                    <p className="text-surface-500 text-sm mt-1">
+                      {isMunicipalUser ? `Estructura municipal asignada` : isDistritalUser ? `Estructura distrital asignada` : `Administración y seguimiento de la estructura capturada`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="badge-info">{representantesGenerales.length} registros</span>
+                    <span className="badge-info">{scopedRG.length} registros</span>
                     <button onClick={() => handleTabClick('generales')} className="btn-primary">
                       <UserCircle className="w-4 h-4" />
                       Nuevo RG
@@ -1252,7 +1424,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {representantesGenerales
+                      {scopedRG
                         .filter(rg => 
                           rg.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           rg.apellido_paterno.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1272,7 +1444,9 @@ export default function App() {
                               <td className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => handleEditRg(rg)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDeleteRg(rg.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                  {canDeleteRecords && (
+                                    <button onClick={() => handleDeleteRg(rg.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                  )}
                                 </div>
                               </td>
                               <td>
@@ -1299,12 +1473,12 @@ export default function App() {
                             </tr>
                           );
                         })}
-                      {representantesGenerales.length === 0 && (
+                      {scopedRG.length === 0 && (
                         <tr>
                           <td colSpan={6} className="text-center py-12">
                             <div className="flex flex-col items-center gap-3">
                               <Users className="w-10 h-10 text-surface-300" />
-                              <p className="text-sm text-surface-400">No hay representantes registrados</p>
+                              <p className="text-sm text-surface-400">No hay representantes registrados en esta demarcación</p>
                             </div>
                           </td>
                         </tr>
@@ -1383,9 +1557,18 @@ export default function App() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
                         <label className="input-label">Municipio</label>
-                        <select required className="select-field" value={rgForm.municipio_id} onChange={e => setRgForm(prev => ({ ...prev, municipio_id: e.target.value, seccion_id: '' }))}>
+                        <select 
+                          required 
+                          disabled={isMunicipalUser}
+                          className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                          value={rgForm.municipio_id} 
+                          onChange={e => setRgForm(prev => ({ ...prev, municipio_id: e.target.value, seccion_id: '' }))}
+                        >
                           <option value="">Seleccionar...</option>
-                          {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
+                          {(isMunicipalUser && currentUser?.municipio_id
+                            ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                            : [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                          ).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                         </select>
                       </div>
                       <div>
@@ -1397,9 +1580,18 @@ export default function App() {
                       </div>
                       <div>
                         <label className="input-label">Distrito Local</label>
-                        <select required className="select-field" value={rgForm.dl_id} onChange={e => setRgForm(prev => ({ ...prev, dl_id: e.target.value, seccion_id: '' }))}>
+                        <select 
+                          required 
+                          disabled={isDistritalUser}
+                          className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                          value={rgForm.dl_id} 
+                          onChange={e => setRgForm(prev => ({ ...prev, dl_id: e.target.value, seccion_id: '' }))}
+                        >
                           <option value="">Seleccionar...</option>
-                          {[...distritosLocales].sort((a, b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                          {(isDistritalUser && currentUser?.dl_id
+                            ? distritosLocales.filter(d => Number(d.id) === Number(currentUser.dl_id))
+                            : [...distritosLocales].sort((a, b) => (a.dl || 0) - (b.dl || 0))
+                          ).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
                         </select>
                       </div>
                       <div>
@@ -1590,16 +1782,25 @@ export default function App() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
                         <label className="input-label">Municipio</label>
-                        <select required className="select-field" value={rcForm.municipio_id} onChange={e => setRcForm({...rcForm, municipio_id: e.target.value, seccion_id: '', casilla_id: ''})}>
+                        <select 
+                          required 
+                          disabled={isMunicipalUser}
+                          className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                          value={rcForm.municipio_id} 
+                          onChange={e => setRcForm({...rcForm, municipio_id: e.target.value, seccion_id: '', casilla_id: ''})}
+                        >
                           <option value="">Seleccionar...</option>
-                          {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
+                          {(isMunicipalUser && currentUser?.municipio_id
+                            ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                            : [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                          ).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                         </select>
                       </div>
                       <div>
                          <label className="input-label">Casilla Asignada</label>
                          <select required className="select-field" value={rcForm.casilla_id} onChange={e => {
                            const selectedId = e.target.value;
-                           const cas = casillas.find(c => String(c.casilla_id) === String(selectedId));
+                           const cas = scopedCasillas.find(c => String(c.casilla_id) === String(selectedId));
                            setRcForm({
                              ...rcForm, 
                              casilla_id: selectedId,
@@ -1609,8 +1810,8 @@ export default function App() {
                            });
                          }}>
                            <option value="">Seleccionar...</option>
-                           {casillas
-                             .filter(c => String(c.municipio) === rcForm.municipio_id)
+                           {scopedCasillas
+                             .filter(c => !rcForm.municipio_id || String(c.municipio) === rcForm.municipio_id)
                              .sort((a,b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, {numeric: true}))
                              .map(c => <option key={c.casilla_id} value={c.casilla_id}>{c.casilla}</option>)}
                          </select>
@@ -1709,12 +1910,16 @@ export default function App() {
                         <label className="input-label">Distrito Local</label>
                         <select 
                           required 
-                          className="select-field" 
+                          disabled={isDistritalUser}
+                          className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
                           value={rcForm.dl_id} 
                           onChange={e => setRcForm({...rcForm, dl_id: e.target.value})}
                         >
                           <option value="">Seleccionar...</option>
-                          {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => (
+                          {(isDistritalUser && currentUser?.dl_id
+                            ? distritosLocales.filter(d => Number(d.id) === Number(currentUser.dl_id))
+                            : [...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0))
+                          ).map(d => (
                             <option key={d.id} value={d.id}>DL {d.dl}</option>
                           ))}
                         </select>
@@ -1738,10 +1943,12 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                   <div>
                     <h1 className="text-2xl font-bold text-surface-900">Representantes de Casilla</h1>
-                    <p className="text-surface-500 text-sm mt-1">Seguimiento de la estructura en niveles de casilla</p>
+                    <p className="text-surface-500 text-sm mt-1">
+                      {isMunicipalUser ? `Estructura municipal asignada` : isDistritalUser ? `Estructura distrital asignada` : `Seguimiento de la estructura en niveles de casilla`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="badge-warning">{representantesCasilla.length} registros</span>
+                    <span className="badge-warning">{scopedRC.length} registros</span>
                     <button onClick={() => handleTabClick('casilla')} className="btn-primary">
                       <UserCircle className="w-4 h-4" />
                       Nuevo RC
@@ -1761,7 +1968,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {representantesCasilla
+                      {scopedRC
                         .filter(rc => 
                           rc.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (rc.telefono && rc.telefono.includes(searchTerm))
@@ -1781,7 +1988,9 @@ export default function App() {
                               <td className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => handleEditRc(rc)} className="btn-icon" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDeleteRc(rc.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                  {canDeleteRecords && (
+                                    <button onClick={() => handleDeleteRc(rc.id)} className="btn-icon hover:!text-danger-600 hover:!bg-danger-50" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                  )}
                                 </div>
                               </td>
                               <td><span className="font-semibold text-surface-800 uppercase">{rc.nombre} {rc.apellido_paterno}</span></td>
@@ -1791,6 +2000,13 @@ export default function App() {
                             </tr>
                           );
                         })}
+                      {scopedRC.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="text-center py-12">
+                            <p className="text-sm text-surface-400">No hay representantes de casilla registrados en esta demarcación</p>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1818,9 +2034,17 @@ export default function App() {
                     </div>
                     <div>
                       <label className="input-label">Municipio</label>
-                      <select className="select-field" value={casillaMgmtForm.municipio_id} onChange={e => setCasillaMgmtForm({...casillaMgmtForm, municipio_id: e.target.value})}>
+                      <select 
+                        disabled={isMunicipalUser}
+                        className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                        value={casillaMgmtForm.municipio_id} 
+                        onChange={e => setCasillaMgmtForm({...casillaMgmtForm, municipio_id: e.target.value})}
+                      >
                         <option value="">Seleccionar...</option>
-                        {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
+                        {(isMunicipalUser && currentUser?.municipio_id
+                          ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                          : [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                        ).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1835,9 +2059,17 @@ export default function App() {
                     </div>
                     <div>
                       <label className="input-label">Distrito Local</label>
-                      <select className="select-field" value={casillaMgmtForm.dl_id} onChange={e => setCasillaMgmtForm({...casillaMgmtForm, dl_id: e.target.value})}>
+                      <select 
+                        disabled={isDistritalUser}
+                        className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                        value={casillaMgmtForm.dl_id} 
+                        onChange={e => setCasillaMgmtForm({...casillaMgmtForm, dl_id: e.target.value})}
+                      >
                         <option value="">Seleccionar...</option>
-                        {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                        {(isDistritalUser && currentUser?.dl_id
+                          ? distritosLocales.filter(d => Number(d.id) === Number(currentUser.dl_id))
+                          : [...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0))
+                        ).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1871,7 +2103,9 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                   <div>
                     <h1 className="text-2xl font-bold text-surface-900">Catálogo de Casillas</h1>
-                    <p className="text-surface-500 text-sm mt-1">Consulta de casillas electorales</p>
+                    <p className="text-surface-500 text-sm mt-1">
+                      {isMunicipalUser ? `Casillas de tu municipio asignado` : isDistritalUser ? `Casillas de tu distrito asignado` : `Consulta de casillas electorales`}
+                    </p>
                   </div>
                   <button onClick={() => setActiveTab('casillas_form')} className="btn-primary whitespace-nowrap">
                     Nueva Casilla
@@ -1891,7 +2125,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {casillas
+                      {scopedCasillas
                         .filter(c => {
                           const search = searchTerm.toLowerCase().trim();
                           if (!search) return true;
@@ -1928,7 +2162,7 @@ export default function App() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                {(String(currentUser?.rol) === '1' || currentUser?.rol === 'ADMIN') && (
+                                {canDeleteRecords && (
                                   <button 
                                     onClick={() => handleDeleteCasilla(cas.casilla_id)} 
                                     className="p-1.5 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors" 
@@ -2009,16 +2243,24 @@ export default function App() {
                     </div>
                     <div>
                       <label className="input-label">Municipio (Filtro)</label>
-                      <select className="select-field" value={rutaForm.municipio_id} onChange={e => setRutaForm({...rutaForm, municipio_id: e.target.value, casillas_asignada: []})}>
+                      <select 
+                        disabled={isMunicipalUser}
+                        className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                        value={rutaForm.municipio_id} 
+                        onChange={e => setRutaForm({...rutaForm, municipio_id: e.target.value, casillas_asignada: []})}
+                      >
                         <option value="">Todos los municipios...</option>
-                        {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
+                        {(isMunicipalUser && currentUser?.municipio_id
+                          ? municipios.filter(m => Number(m.id) === Number(currentUser.municipio_id))
+                          : [...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || ''))
+                        ).map(m => <option key={m.id} value={m.id}>{m.municipio}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="input-label">RG Responsable</label>
                       <select className="select-field" value={rutaForm.representante_general_id} onChange={e => setRutaForm({...rutaForm, representante_general_id: e.target.value})}>
                         <option value="">Seleccionar...</option>
-                        {[...representantesGenerales].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => <option key={rg.id} value={rg.id}>{`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}</option>)}
+                        {[...scopedRG].sort((a,b) => a.nombre.localeCompare(b.nombre)).map(rg => <option key={rg.id} value={rg.id}>{`${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim()}</option>)}
                       </select>
                     </div>
                   </div>
@@ -2033,16 +2275,24 @@ export default function App() {
                     </div>
                     <div>
                       <label className="input-label">Distrito Local</label>
-                      <select className="select-field" value={rutaForm.dl_id} onChange={e => setRutaForm({...rutaForm, dl_id: e.target.value, casillas_asignada: []})}>
+                      <select 
+                        disabled={isDistritalUser}
+                        className="select-field disabled:bg-surface-100 disabled:cursor-not-allowed" 
+                        value={rutaForm.dl_id} 
+                        onChange={e => setRutaForm({...rutaForm, dl_id: e.target.value, casillas_asignada: []})}
+                      >
                         <option value="">Todos los distritos...</option>
-                        {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
+                        {(isDistritalUser && currentUser?.dl_id
+                          ? distritosLocales.filter(d => Number(d.id) === Number(currentUser.dl_id))
+                          : [...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0))
+                        ).map(d => <option key={d.id} value={d.id}>DL {d.dl}</option>)}
                       </select>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex justify-between items-end">
-                      <label className="input-label">Seleccionar Casillas ({casillas.filter(c => {
+                      <label className="input-label">Seleccionar Casillas ({scopedCasillas.filter(c => {
                         if (rutaForm.municipio_id && String(c.municipio) !== String(rutaForm.municipio_id)) return false;
                         
                         if (rutaForm.df_id) {
@@ -2166,19 +2416,19 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-100">
-                        {rutas.length === 0 ? (
+                        {scopedRutas.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-12 text-center text-surface-500">
                               <Route className="w-8 h-8 mx-auto mb-3 text-surface-300" />
-                              <p className="font-medium text-surface-900">No hay rutas registradas</p>
+                              <p className="font-medium text-surface-900">No hay rutas registradas en esta demarcación</p>
                               <p className="text-sm">Comienza creando tu primera ruta.</p>
                             </td>
                           </tr>
                         ) : (
-                          rutas.map(ruta => {
+                          scopedRutas.map(ruta => {
                             const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
                             const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
-                            const casillasDeRuta = casillas
+                            const casillasDeRuta = scopedCasillas
                               .filter(c => casillaIds.includes(String(c.casilla_id)))
                               .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -2189,9 +2439,11 @@ export default function App() {
                                     <button onClick={() => handleEditRuta(ruta)} className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-colors" title="Editar">
                                       <Edit2 className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors" title="Eliminar">
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    {canDeleteRecords && (
+                                      <button onClick={() => handleDeleteRuta(ruta.id)} className="p-1.5 text-surface-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors" title="Eliminar">
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 whitespace-nowrap">
@@ -2273,10 +2525,10 @@ export default function App() {
                       onChange={(e) => setReporteRutaId(e.target.value)}
                     >
                       <option value="">— Elige una ruta —</option>
-                      {[...rutas]
+                      {[...scopedRutas]
                         .sort((a, b) => a.nombre_ruta.localeCompare(b.nombre_ruta))
                         .map(r => {
-                          const rg = representantesGenerales.find(g => String(g.id) === String(r.representante_general_id));
+                          const rg = scopedRG.find(g => String(g.id) === String(r.representante_general_id));
                           return (
                             <option key={r.id} value={r.id}>
                               {r.nombre_ruta}{rg ? ` — RG: ${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trimEnd() : ''}
@@ -2288,12 +2540,12 @@ export default function App() {
                 </div>
 
                 {reporteRutaId ? (() => {
-                  const ruta = rutas.find(r => String(r.id) === reporteRutaId);
+                  const ruta = scopedRutas.find(r => String(r.id) === reporteRutaId);
                   if (!ruta) return null;
-                  const rg = representantesGenerales.find(r => String(r.id) === String(ruta.representante_general_id));
+                  const rg = scopedRG.find(r => String(r.id) === String(ruta.representante_general_id));
                   const rgName = rg ? `${rg.nombre} ${rg.apellido_paterno} ${rg.apellido_materno || ''}`.trim() : 'SIN ASIGNAR';
                   const casillaIds = (ruta.casillas_asignada as any[] || []).map(String);
-                  const casillasDeRuta = casillas
+                  const casillasDeRuta = scopedCasillas
                     .filter(c => casillaIds.includes(String(c.casilla_id)))
                     .sort((a, b) => (a.casilla || '').localeCompare(b.casilla || '', undefined, { numeric: true, sensitivity: 'base' }));
                   const roles = ['PROPIETARIO 1', 'SUPLENTE 1', 'PROPIETARIO 2', 'SUPLENTE 2'];
@@ -2338,7 +2590,7 @@ export default function App() {
                             </tr>
                           ) : (
                             casillasDeRuta.flatMap(c => {
-                              const rcsForCasilla = representantesCasilla.filter(rc => rc.casilla_id === c.casilla_id);
+                              const rcsForCasilla = scopedRC.filter(rc => rc.casilla_id === c.casilla_id);
                               return roles.map(role => {
                                 const rc = rcsForCasilla.find(r => r.tipo_nombramiento === role);
                                 return (
@@ -2442,10 +2694,46 @@ export default function App() {
                             value={userForm.rol}
                             onChange={e => setUserForm({...userForm, rol: e.target.value as any})}
                           >
-                            <option value="CAPTURISTA">CAPTURISTA (Restringido)</option>
-                            <option value="ADMIN">ADMINISTRADOR (Total)</option>
+                            <option value="ADMIN">ADMINISTRADOR (Estatal - Control Total)</option>
+                            <option value="ESTATAL">ESTATAL (Todo el Estado - Operador)</option>
+                            <option value="MUNICIPAL">MUNICIPAL (Restringido a un Municipio)</option>
+                            <option value="DISTRITAL">DISTRITAL (Restringido a un Distrito Local)</option>
                           </select>
                         </div>
+
+                        {userForm.rol === 'MUNICIPAL' && (
+                          <div className="animate-fade-in-up">
+                            <label className="input-label">Municipio Asignado *</label>
+                            <select 
+                              required 
+                              className="select-field"
+                              value={userForm.municipio_id}
+                              onChange={e => setUserForm({...userForm, municipio_id: e.target.value})}
+                            >
+                              <option value="">— Seleccionar Municipio —</option>
+                              {[...municipios].sort((a,b) => (a.municipio || '').localeCompare(b.municipio || '')).map(m => (
+                                <option key={m.id} value={m.id}>{m.municipio}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {userForm.rol === 'DISTRITAL' && (
+                          <div className="animate-fade-in-up">
+                            <label className="input-label">Distrito Local Asignado *</label>
+                            <select 
+                              required 
+                              className="select-field"
+                              value={userForm.dl_id}
+                              onChange={e => setUserForm({...userForm, dl_id: e.target.value})}
+                            >
+                              <option value="">— Seleccionar Distrito Local —</option>
+                              {[...distritosLocales].sort((a,b) => (a.dl || 0) - (b.dl || 0)).map(d => (
+                                <option key={d.id} value={d.id}>Distrito Local {d.dl}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
                         <div>
                           <div className="flex justify-between">
@@ -2535,9 +2823,24 @@ export default function App() {
                                 <td>
                                   <div>
                                     <p className="text-sm font-medium text-surface-700">{u.nombre_completo || '—'}</p>
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${(String(u.rol) === '1' || u.rol === 'ADMIN') ? 'bg-inst-100 text-inst-700' : 'bg-surface-100 text-surface-500'}`}>
-                                      {(String(u.rol) === '1' || u.rol === 'ADMIN') ? 'ADMIN' : (String(u.rol) === '2' || u.rol === 'CAPTURISTA') ? 'CAPTURISTA' : u.rol}
-                                    </span>
+                                    {(() => {
+                                      const uRol = String(u.rol || '').toUpperCase();
+                                      if (uRol === '1' || uRol === 'ADMIN') {
+                                        return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-inst-100 text-inst-700">ADMIN (Estatal)</span>;
+                                      }
+                                      if (uRol === '2' || uRol === 'ESTATAL') {
+                                        return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700">ESTATAL</span>;
+                                      }
+                                      if (uRol === 'MUNICIPAL') {
+                                        const mun = municipios.find(m => Number(m.id) === Number((u as any).municipio_id));
+                                        return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700">MUNICIPAL · {mun?.municipio || `#${(u as any).municipio_id || ''}`}</span>;
+                                      }
+                                      if (uRol === 'DISTRITAL') {
+                                        const dist = distritosLocales.find(d => Number(d.id) === Number((u as any).dl_id));
+                                        return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">DISTRITAL · DL {dist?.dl || (u as any).dl_id || ''}</span>;
+                                      }
+                                      return <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-100 text-surface-600">{uRol || 'CAPTURISTA'}</span>;
+                                    })()}
                                   </div>
                                 </td>
                                 <td>

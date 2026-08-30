@@ -98,7 +98,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  if (currentUser?.rol === 'ADMIN' || currentUser?.rol === 1 || currentUser?.rol === '1') {
+  const isAdmin = currentUser?.rol === 'ADMIN' || String(currentUser?.rol) === '1' || String(currentUser?.rol).toUpperCase() === 'ADMIN';
+
+  if (isAdmin) {
     navigationItems.push({
       id: 'group_admin',
       label: 'Configuración',

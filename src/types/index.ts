@@ -71,9 +71,17 @@ export interface Ruta {
   capturista_id?: number;
 }
 
+export type RolUsuario = 'ADMIN' | 'ESTATAL' | 'MUNICIPAL' | 'DISTRITAL' | 'CAPTURISTA' | string;
+
 export interface Usuario {
   id: number;
   usuario: string;
-  rol: 'ADMIN' | 'CAPTURISTA';
-  nombre_completo?: string;
+  rol: RolUsuario;
+  nombre_completo?: string | null;
+  telefono?: string | null;
+  municipio_id?: number | null;
+  dl_id?: number | null;
+  nombre_municipio?: string | null;
+  numero_dl?: number | null;
 }
+

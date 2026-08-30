@@ -316,6 +316,8 @@ export interface Database {
           nombre_completo: string | null
           telefono: string | null
           user_id: string | null
+          municipio_id: number | null
+          dl_id: number | null
         }
         Insert: {
           id?: number
@@ -325,6 +327,8 @@ export interface Database {
           nombre_completo?: string | null
           telefono?: string | null
           user_id?: string | null
+          municipio_id?: number | null
+          dl_id?: number | null
         }
         Update: {
           id?: number
@@ -334,6 +338,8 @@ export interface Database {
           nombre_completo?: string | null
           telefono?: string | null
           user_id?: string | null
+          municipio_id?: number | null
+          dl_id?: number | null
         }
         Relationships: []
       }
@@ -383,6 +389,11 @@ export interface Database {
           usuario: string
           rol: string
           nombre_completo: string
+          telefono?: string
+          municipio_id?: number | null
+          dl_id?: number | null
+          nombre_municipio?: string | null
+          numero_dl?: number | null
         }
       }
       manage_user_secure: {
@@ -392,7 +403,9 @@ export interface Database {
           in_password: string
           in_rol: string
           in_nombre_completo: string
-          in_telefono?: string
+          in_telefono?: string | null
+          in_municipio_id?: number | null
+          in_dl_id?: number | null
         }
         Returns: Json
       }
