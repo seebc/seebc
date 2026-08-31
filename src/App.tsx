@@ -912,12 +912,17 @@ export default function App() {
   const scopedRG = React.useMemo(() => {
     if (isMunicipalUser && currentUser?.municipio_id) {
       return representantesGenerales.filter(rg => {
-        const sec = secciones.find(s => s.id === rg.seccion_id);
-        return (rg.municipio_id && Number(rg.municipio_id) === Number(currentUser.municipio_id)) || (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
+        const sec = secciones.find(s => Number(s.id) === Number(rg.seccion_id));
+        return (rg.municipio_id && Number(rg.municipio_id) === Number(currentUser.municipio_id)) || 
+               (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
       });
     }
     if (isDistritalUser && currentUser?.dl_id) {
-      return representantesGenerales.filter(rg => Number(rg.dl_id) === Number(currentUser.dl_id));
+      return representantesGenerales.filter(rg => {
+        const sec = secciones.find(s => Number(s.id) === Number(rg.seccion_id));
+        return (rg.dl_id && Number(rg.dl_id) === Number(currentUser.dl_id)) || 
+               (sec && Number(sec.dl_id) === Number(currentUser.dl_id));
+      });
     }
     return representantesGenerales;
   }, [representantesGenerales, secciones, isMunicipalUser, isDistritalUser, currentUser]);
@@ -926,13 +931,20 @@ export default function App() {
   const scopedRC = React.useMemo(() => {
     if (isMunicipalUser && currentUser?.municipio_id) {
       return representantesCasilla.filter(rc => {
-        const cas = casillas.find(c => c.casilla_id === rc.casilla_id);
-        const sec = secciones.find(s => s.id === rc.seccion_id);
-        return (cas && Number(cas.municipio) === Number(currentUser.municipio_id)) || (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
+        const cas = casillas.find(c => Number(c.casilla_id) === Number(rc.casilla_id));
+        const sec = secciones.find(s => Number(s.id) === Number(rc.seccion_id));
+        return (cas && Number(cas.municipio) === Number(currentUser.municipio_id)) || 
+               (sec && Number(sec.municipio_id) === Number(currentUser.municipio_id));
       });
     }
     if (isDistritalUser && currentUser?.dl_id) {
-      return representantesCasilla.filter(rc => Number(rc.dl_id) === Number(currentUser.dl_id));
+      return representantesCasilla.filter(rc => {
+        const cas = casillas.find(c => Number(c.casilla_id) === Number(rc.casilla_id));
+        const sec = secciones.find(s => Number(s.id) === Number(rc.seccion_id));
+        return (rc.dl_id && Number(rc.dl_id) === Number(currentUser.dl_id)) || 
+               (cas && Number(cas.dl) === Number(currentUser.dl_id)) || 
+               (sec && Number(sec.dl_id) === Number(currentUser.dl_id));
+      });
     }
     return representantesCasilla;
   }, [representantesCasilla, casillas, secciones, isMunicipalUser, isDistritalUser, currentUser]);
@@ -940,13 +952,27 @@ export default function App() {
   // Filtrado de Rutas por territorio
   const scopedRutas = React.useMemo(() => {
     if (isMunicipalUser && currentUser?.municipio_id) {
-      return rutas.filter(r => Number(r.municipio_id) === Number(currentUser.municipio_id));
+      return rutas.filter(r => {
+        if (r.municipio_id && Number(r.municipio_id) === Number(currentUser.municipio_id)) return true;
+        if (Array.isArray(r.casillas_asignada) && r.casillas_asignada.length > 0) {
+          const firstCas = casillas.find(c => Number(c.casilla_id) === Number(r.casillas_asignada[0]));
+          if (firstCas && Number(firstCas.municipio) === Number(currentUser.municipio_id)) return true;
+        }
+        return false;
+      });
     }
     if (isDistritalUser && currentUser?.dl_id) {
-      return rutas.filter(r => Number(r.dl_id) === Number(currentUser.dl_id));
+      return rutas.filter(r => {
+        if (r.dl_id && Number(r.dl_id) === Number(currentUser.dl_id)) return true;
+        if (Array.isArray(r.casillas_asignada) && r.casillas_asignada.length > 0) {
+          const firstCas = casillas.find(c => Number(c.casilla_id) === Number(r.casillas_asignada[0]));
+          if (firstCas && Number(firstCas.dl) === Number(currentUser.dl_id)) return true;
+        }
+        return false;
+      });
     }
     return rutas;
-  }, [rutas, isMunicipalUser, isDistritalUser, currentUser]);
+  }, [rutas, casillas, isMunicipalUser, isDistritalUser, currentUser]);
 
   // --- Cálculos de métricas basados en el alcance territorial ---
   const idsCasillasConRepresentante = new Set(scopedRC.map(rc => rc.casilla_id));
