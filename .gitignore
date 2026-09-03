@@ -37,6 +37,8 @@ dist-ssr
 *.txt
 *.cjs
 *.js
+*.mjs
+scratch/
 !src/**/*.ts
 !src/**/*.tsx
 !src/**/*.js
